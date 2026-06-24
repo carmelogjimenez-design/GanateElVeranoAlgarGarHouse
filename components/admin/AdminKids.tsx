@@ -121,12 +121,34 @@ export default function AdminKids({ ctx }: { ctx: Ctx }) {
   const addTeam = async () => { const n = prompt("Nombre del equipo:"); if (n) { await sb.from("teams").insert({ name: n }); refresh(); } };
   const addKid = async () => { const n = prompt("Nombre del hijo:"); if (n) { await sb.from("kids").insert({ name: n, pin: "1111", color: SWATCHES[Math.floor(Math.random() * SWATCHES.length)] }); flash("Creado con PIN 1111"); refresh(); } };
   const setTeam = async (kidId: string, teamId: string) => { await sb.from("kids").update({ team_id: teamId || null }).eq("id", kidId); flash("Equipo actualizado"); refresh(); };
+  const delTeam = async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar el equipo "${name}"? Sus miembros quedarán sin equipo.`)) return;
+    await sb.from("kids").update({ team_id: null }).eq("team_id", id);
+    await sb.from("assignments").update({ team_id: null }).eq("team_id", id);
+    const { error } = await sb.from("teams").delete().eq("id", id);
+    flash(error ? error.message : "Equipo eliminado"); refresh();
+  };
   return (
     <div className="pb-6">
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-3">
         <Btn variant="primary" className="flex-1 flex items-center justify-center gap-1.5" onClick={addKid}><UserPlus size={17} /> Hijo</Btn>
         <Btn variant="dark" className="flex-1 flex items-center justify-center gap-1.5" onClick={addTeam}><FlagTriangleRight size={17} /> Equipo</Btn>
       </div>
+      {db.teams.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {db.teams.map((t) => {
+            const n = db.kids.filter((k) => k.team_id === t.id).length;
+            return (
+              <span key={t.id} className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl pl-2.5 pr-1.5 py-1.5 text-sm">
+                <span className="w-3 h-3 rounded-full" style={{ background: t.color }} />
+                <span className="font-semibold text-navy">{t.name}</span>
+                <span className="text-xs text-slate-400">{n}</span>
+                <button onClick={() => delTeam(t.id, t.name)} className="text-slate-300 hover:text-red-400"><Trash2 size={14} /></button>
+              </span>
+            );
+          })}
+        </div>
+      )}
       <div className="space-y-2.5">
         {db.kids.map((k) => (
           <Card key={k.id} className="p-3.5">

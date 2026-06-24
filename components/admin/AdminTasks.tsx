@@ -100,6 +100,11 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
     const { data, error } = await rpc("generate_missions", { p_date: todayStr() });
     flash(error ? error.message : `${data ?? 0} misiones generadas para hoy`); refresh();
   };
+  const savePoints = async (id: string, points: number) => {
+    if (!Number.isFinite(points) || points < 0) return;
+    await sb.from("tasks").update({ points }).eq("id", id);
+    flash("Puntos actualizados"); refresh();
+  };
   return (
     <div className="pb-6">
       <Card className="p-4 space-y-2.5 mb-4">
@@ -137,7 +142,11 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-navy truncate">{t.title}</div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          <Chip tone="brand">+{t.points} XP</Chip>
+                          <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-lg pl-1.5 pr-1 py-0.5">
+                            <span className="text-brand font-bold text-xs">+</span>
+                            <input type="number" defaultValue={t.points} onBlur={(e) => savePoints(t.id, +e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="w-10 bg-transparent text-brand font-bold text-sm text-center outline-none" />
+                            <span className="text-brand font-bold text-xs">XP</span>
+                          </div>
                           {t.photo_required && <Chip tone="amber">foto</Chip>}
                           {targets > 0 && <Chip tone="teal">recurrente · {targets}</Chip>}
                         </div>
