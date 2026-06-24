@@ -11,7 +11,7 @@ import Pending from "@/components/Pending";
 import KidApp from "@/components/kid/KidApp";
 import AdminApp from "@/components/admin/AdminApp";
 
-type Session = { user?: { email?: string } } | null;
+type Session = { user?: { email?: string; id?: string } } | null;
 
 export default function Page() {
   const [screen, setScreen] = useState<Screen>("lobby");
@@ -50,7 +50,12 @@ export default function Page() {
   // Logueado: comprobando permisos / admin / pendiente
   if (session) {
     if (isAdmin === null) return <div className="p-10 text-center text-2xl">Comprobando permisos… 🔐</div>;
-    if (!isAdmin) return <Pending email={session.user?.email || ""} onLogout={logout} />;
+    if (!isAdmin) {
+      const myKid = db.kids.find((k) => k.user_id === session.user?.id);
+      if (!myKid) return <Pending ctx={ctx} mode="register" />;
+      if (myKid.status !== "active") return <Pending ctx={ctx} mode="waiting" kidName={myKid.name} />;
+      return <KidApp ctx={{ ...ctx, kid: myKid }} />;
+    }
   }
 
   return (

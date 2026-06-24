@@ -11,13 +11,34 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const red = db.redemptions.filter((r) => r.status === "pending");
   const gif = db.gifts.filter((g) => g.status === "pending");
   const sr = db.study_rewards.filter((r) => r.status === "pending");
+  const newKids = db.kids.filter((k) => k.user_id && k.status === "pending");
   const call = async (fn: string, args: Record<string, unknown>, msg: string) => {
     const { error } = await rpc(fn, args); flash(error ? error.message : msg); refresh();
   };
-  if (!asg.length && !red.length && !gif.length && !sr.length)
+  if (!asg.length && !red.length && !gif.length && !sr.length && !newKids.length)
     return <Card className="p-8 text-center text-slate-400 font-medium">Nada pendiente. Reina la paz… por ahora.</Card>;
   return (
     <div className="space-y-5 pb-6">
+      {newKids.length > 0 && (
+        <Section title="Nuevos hijos por autorizar">
+          {newKids.map((k) => (
+            <Card key={k.id} className="p-4 border-2 border-brand/30 bg-orange-50/40">
+              <div className="flex items-center gap-3 mb-3">
+                <Avatar name={k.name} color={k.color} size={40} avatar={k.avatar} />
+                <div className="flex-1 min-w-0"><div className="font-bold text-navy truncate">{k.name} quiere unirse</div><div className="text-xs text-slate-500">Elige su equipo para darle acceso</div></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {db.teams.map((t) => (
+                  <Btn key={t.id} variant="dark" className="text-sm py-2.5 flex items-center justify-center gap-2" onClick={() => call("approve_kid", { p_kid: k.id, p_team: t.id }, `¡${k.name} entra en ${t.name}!`)}>
+                    <span className="w-3 h-3 rounded-full" style={{ background: t.color }} />{t.name}
+                  </Btn>
+                ))}
+              </div>
+              {db.teams.length === 0 && <p className="text-xs text-slate-400 font-medium mt-1">Crea equipos primero en la pestaña Hijos.</p>}
+            </Card>
+          ))}
+        </Section>
+      )}
       {asg.length > 0 && (
         <Section title="Misiones para revisar">
           {asg.map((a) => {

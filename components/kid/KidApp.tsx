@@ -18,7 +18,8 @@ import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut,
 type Celeb = { icon: React.ReactNode; title: string; subtitle?: string; color?: string };
 
 export default function KidApp({ ctx }: { ctx: Ctx }) {
-  const { db, kid, setScreen, isAdmin, refresh, flash } = ctx;
+  const { db, kid, setScreen, isAdmin, refresh, flash, session, logout } = ctx;
+  const exit = () => { if (isAdmin) setScreen("admin"); else if (session) logout(); else setScreen("lobby"); };
   const me = db.kids.find((k) => k.id === kid!.id) || kid!;
   const [tab, setTab] = useState("inicio");
   const [mercado, setMercado] = useState(false);
@@ -82,7 +83,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
             <Bell size={17} />{bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
           </button>
           <button onClick={() => setAvatarOpen(true)} title="Cambiar avatar"><Avatar name={me.name} color={me.color} size={36} avatar={me.avatar} /></button>
-          <button onClick={() => setScreen(isAdmin ? "admin" : "lobby")} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500" title="Salir"><LogOut size={16} /></button>
+          <button onClick={exit} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500" title="Salir"><LogOut size={16} /></button>
         </div>
       </header>
 

@@ -3,6 +3,7 @@ export type Kid = {
   id: string; name: string; emoji: string; color: string; team_id: string | null;
   total_points: number; study_enabled: boolean; active: boolean; created_at: string; pin?: string;
   weekly_goal: number; can_tutor: boolean; app_access: boolean; avatar: string;
+  user_id: string | null; status: string;
 };
 export type Task = {
   id: string; title: string; description: string; category: string; frequency: string;

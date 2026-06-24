@@ -59,7 +59,7 @@ export default function Lobby({ ctx, onKid, onLogin }: { ctx: Ctx; onKid: (k: Ki
 
       <h2 className="font-bold text-navy tracking-tight mt-8 mb-3">¿Quién juega?</h2>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-        {db.kids.map((k) => (
+        {db.kids.filter((k) => !k.user_id).map((k) => (
           <Card key={k.id} onClick={() => onKid(k)} className="p-4 flex flex-col items-center">
             <Avatar name={k.name} color={k.color} size={48} avatar={k.avatar} />
             <span className="font-semibold text-sm mt-2 text-navy truncate w-full text-center">{k.name}</span>

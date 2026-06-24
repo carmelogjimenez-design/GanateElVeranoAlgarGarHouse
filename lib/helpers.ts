@@ -10,7 +10,7 @@ export async function loadAll(): Promise<DB> {
   await Promise.all(
     tables.map(async (t) => {
       const cols = t === "kids"
-        ? "id,name,emoji,color,team_id,total_points,study_enabled,active,created_at,weekly_goal,can_tutor,app_access,avatar"
+        ? "id,name,emoji,color,team_id,total_points,study_enabled,active,created_at,weekly_goal,can_tutor,app_access,avatar,user_id,status"
         : "*";
       const { data } = await sb.from(t).select(cols).order("created_at", { ascending: false });
       out[t] = data ?? [];
