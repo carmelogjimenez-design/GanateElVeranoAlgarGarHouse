@@ -8,9 +8,10 @@ import AdminKids from "@/components/admin/AdminKids";
 import AdminRewards from "@/components/admin/AdminRewards";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminAnalytics from "@/components/admin/AdminAnalytics";
+import AdminHelp from "@/components/admin/AdminHelp";
 import NotificationBell from "@/components/admin/NotificationBell";
 import type { Ctx } from "@/lib/types";
-import { LayoutDashboard, ClipboardCheck, Target, Users, Gift, Settings, BarChart3 } from "lucide-react";
+import { LayoutDashboard, ClipboardCheck, Target, Users, Gift, Settings, BarChart3, HelpCircle } from "lucide-react";
 import { rpc, todayStr } from "@/lib/helpers";
 
 export default function AdminApp({ ctx }: { ctx: Ctx }) {
@@ -30,6 +31,7 @@ export default function AdminApp({ ctx }: { ctx: Ctx }) {
     { key: "premios", label: "Tienda", Icon: Gift },
     { key: "analytics", label: "Analytics", Icon: BarChart3 },
     { key: "ajustes", label: "Ajustes", Icon: Settings },
+    { key: "ayuda", label: "Ayuda", Icon: HelpCircle },
   ];
   return (
     <AppShell variant="admin" title="Panel de padres" subtitle="Centro de mando" brand={<img src="/logo.png" alt="logo" className="w-full h-full object-contain rounded-xl" />}
@@ -42,6 +44,7 @@ export default function AdminApp({ ctx }: { ctx: Ctx }) {
       {tab === "premios" && <AdminRewards ctx={ctx} />}
       {tab === "analytics" && <AdminAnalytics ctx={ctx} />}
       {tab === "ajustes" && <AdminSettings ctx={ctx} />}
+      {tab === "ayuda" && <AdminHelp />}
     </AppShell>
   );
 }

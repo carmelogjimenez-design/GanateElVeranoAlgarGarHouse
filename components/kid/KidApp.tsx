@@ -12,6 +12,7 @@ import KidMarket from "@/components/kid/KidMarket";
 import KidStudy from "@/components/kid/KidStudy";
 import RankingList from "@/components/RankingList";
 import Celebration from "@/components/Celebration";
+import TutorialKid from "@/components/kid/TutorialKid";
 import type { Ctx } from "@/lib/types";
 import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap } from "lucide-react";
 
@@ -25,6 +26,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const [mercado, setMercado] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [celeb, setCeleb] = useState<Celeb | null>(null);
+  const [tut, setTut] = useState(true);
   const myAsg = db.assignments.filter((a) => a.kid_id === me.id);
   const bell = myAsg.filter((a) => a.status === "pending").length;
   const myLevel = levelOf(me.total_points);
@@ -68,6 +70,8 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   nav.push(["ranking", "Ranking", Trophy], ["tienda", "Tienda", ShoppingBag]);
 
   return (
+    <>
+      {tut && <TutorialKid kidName={me.name} onClose={() => setTut(false)} />}
     <div className="min-h-screen pb-24">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
@@ -133,5 +137,6 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
 
       {celeb && <Celebration icon={celeb.icon} title={celeb.title} subtitle={celeb.subtitle} color={celeb.color} onClose={() => setCeleb(null)} />}
     </div>
+    </>
   );
 }

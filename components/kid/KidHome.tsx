@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
 import { Card, Ring, Bar, IconTile, Chip, Btn, Modal } from "@/components/ui/atoms";
-import { rpc } from "@/lib/helpers";
+import { rpc, todayStr } from "@/lib/helpers";
 import {
   levelOf, levelProgress, xpToNext, nearestReward,
   weeklyXp, weekdayBars, studyTodaySeconds, teamWeeklyXp, streakDays,
 } from "@/lib/game";
 import { missionIcon, badgeIcon } from "@/lib/icons";
 import { COPY, pick } from "@/lib/copy";
+import { kidVibe } from "@/lib/vibes";
 import type { Ctx, Kid } from "@/lib/types";
 import {
   Flame, Clock, Trophy, ArrowRight, Check, Target, Award, Brain, Sparkles,
@@ -52,11 +53,31 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
   const earned = new Set(db.kid_badges.filter((b) => b.kid_id === me.id).map((b) => b.badge_code));
   const catalog = [...db.badges_catalog].sort((a, b) => a.sort - b.sort);
 
+  const today = todayStr();
+  const todayAsg = myAsg.filter((a) => a.due_date === today);
+  const doneToday = todayAsg.filter((a) => ["approved", "done"].includes(a.status)).length;
+  const pendingToday = todayAsg.filter((a) => ["todo", "rejected", "pending"].includes(a.status)).length;
+  const weekLeader = [...db.kids].map((k) => ({ id: k.id, w: weeklyXp(db.point_events, k.id) })).sort((a, b) => b.w - a.w)[0];
+  const isWeekKid = !!weekLeader && weekLeader.id === me.id && weekLeader.w > 0;
+  const vibe = kidVibe({ name: me.name, isWeekKid, doneToday, pendingToday });
+
   const days = ["L", "M", "X", "J", "V", "S", "D"];
   const weekdayName = ["L", "M", "X", "J", "V", "S", "D"][(new Date().getDay() + 6) % 7];
 
   return (
     <div className="space-y-5">
+      {/* MENSAJE DE BIENVENIDA */}
+      <div className="rounded-3xl p-5 text-white relative overflow-hidden" style={{ background: isWeekKid ? "linear-gradient(120deg,#EAB308,#FF8A00)" : "linear-gradient(120deg,#0B1F3A,#13315c)" }}>
+        <div className="absolute -top-10 -right-8 w-40 h-40 rounded-full blur-2xl opacity-30" style={{ background: isWeekKid ? "#fff" : "#19D3AE" }} />
+        <div className="relative flex items-center gap-3">
+          {isWeekKid && <div className="text-4xl">👑</div>}
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider opacity-70">{isWeekKid ? "Hijo de la semana" : `Hola, ${me.name}`}</div>
+            <div className="font-extrabold text-lg leading-snug mt-0.5">{vibe}</div>
+          </div>
+        </div>
+      </div>
+
       {/* HERO GRID */}
       <div className="grid gap-4 md:grid-cols-3">
         {/* Nivel actual */}
