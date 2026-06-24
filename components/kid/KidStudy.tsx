@@ -4,6 +4,7 @@ import { Card, Btn, Chip, Bar, Modal, IconTile } from "@/components/ui/atoms";
 import { rpc, fmtMin, todayStr } from "@/lib/helpers";
 import { studyTodaySeconds } from "@/lib/game";
 import { getStudyContent } from "@/lib/study";
+import { notifyParents } from "@/lib/push";
 import type { Ctx, Kid, Subject } from "@/lib/types";
 import { Play, Square, BookOpen, ListChecks, FileQuestion, Trophy, Clock, CheckCircle2, Sparkles } from "lucide-react";
 
@@ -22,6 +23,7 @@ export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
 
   const claim = async () => {
     const { error } = await rpc("claim_study_reward", { p_kid: me.id, p_pin: kid!.pin, p_day: todayStr() });
+    if (!error) notifyParents("Gánate el Verano", `${me.name} pide su recompensa de estudio`);
     flash(error ? error.message : "¡Recompensa solicitada! La aprueban tus padres."); refresh();
   };
 

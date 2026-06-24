@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card, Chip, Btn, IconTile, Modal } from "@/components/ui/atoms";
 import { COPY, pick } from "@/lib/copy";
 import { rpc } from "@/lib/helpers";
+import { notifyParents } from "@/lib/push";
 import { sb } from "@/lib/supabase";
 import { missionIcon } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
@@ -27,7 +28,7 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
     }
     const { error } = await rpc("mark_done", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin, p_photo: url });
     setBusy(null);
-    if (error) flash(error.message); else { flash(pick(COPY.done)); refresh(); }
+    if (error) flash(error.message); else { flash(pick(COPY.done)); notifyParents("Gánate el Verano", `${me.name} ha completado: ${a.title}`); refresh(); }
   };
 
   return (

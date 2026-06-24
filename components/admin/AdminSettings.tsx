@@ -2,10 +2,18 @@
 import { useState } from "react";
 import { Card, Btn, Input } from "@/components/ui/atoms";
 import { sb } from "@/lib/supabase";
+import { enablePush } from "@/lib/push";
+import { Bell } from "lucide-react";
 import type { Ctx } from "@/lib/types";
 
 export default function AdminSettings({ ctx }: { ctx: Ctx }) {
-  const { db, refresh, flash } = ctx;
+  const { db, refresh, flash, session } = ctx;
+  const [pushMsg, setPushMsg] = useState("");
+  const activarPush = async () => {
+    const uid = (session as { user?: { id?: string } } | null)?.user?.id;
+    if (!uid) { setPushMsg("Inicia sesión como padre para activar avisos."); return; }
+    const r = await enablePush(uid); setPushMsg(r.msg);
+  };
   const s = db.settings;
   const [f, setF] = useState({
     team_goal: s?.team_goal ?? 200,
@@ -29,6 +37,12 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
   };
   return (
     <div className="max-w-2xl space-y-4 pb-6">
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2"><Bell size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight">Avisos push</h3></div>
+        <p className="text-sm text-slate-400 font-medium">Activa las notificaciones en este dispositivo para enterarte al instante cuando un hijo complete algo que validar. En el móvil, instala antes la app (botón "Añadir a pantalla de inicio").</p>
+        <Btn variant="dark" className="w-full flex items-center justify-center gap-2" onClick={activarPush}><Bell size={16} /> Activar avisos en este dispositivo</Btn>
+        {pushMsg && <p className="text-sm font-semibold text-teal">{pushMsg}</p>}
+      </Card>
       <Card className="p-5 space-y-3">
         <h3 className="font-bold text-navy tracking-tight">Reto de equipo</h3>
         <div><label className="text-sm font-semibold text-navy">Nombre del reto</label><Input value={f.challenge_label} onChange={(e) => setF({ ...f, challenge_label: e.target.value })} className="mt-1.5" /></div>

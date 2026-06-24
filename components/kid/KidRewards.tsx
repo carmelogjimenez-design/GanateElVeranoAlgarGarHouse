@@ -1,6 +1,7 @@
 "use client";
 import { Card, Btn, IconTile, Bar } from "@/components/ui/atoms";
 import { rpc } from "@/lib/helpers";
+import { notifyParents } from "@/lib/push";
 import { missionIcon } from "@/lib/icons";
 import type { Ctx, Kid, Reward } from "@/lib/types";
 import { Lock } from "lucide-react";
@@ -10,7 +11,7 @@ export default function KidRewards({ ctx, me, onCelebrate }: { ctx: Ctx; me: Kid
   const ask = async (r: Reward) => {
     const { error } = await rpc("request_redemption", { p_kid: me.id, p_pin: kid!.pin, p_reward: r.id });
     if (error) { flash(error.message); return; }
-    onCelebrate?.(); refresh();
+    onCelebrate?.(); notifyParents("Gánate el Verano", `${me.name} quiere canjear: ${r.title}`); refresh();
   };
   return (
     <div className="pb-6">

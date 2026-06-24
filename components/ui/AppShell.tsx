@@ -7,12 +7,12 @@ export type NavItem = { key: string; label: string; Icon: LucideIcon };
 
 export function AppShell({
   variant, title, subtitle, accent = "#FF8A00", brand,
-  nav, active, onChange, onExit, exitLabel = "Salir", children,
+  nav, active, onChange, onExit, exitLabel = "Salir", headerRight, children,
 }: {
   variant: "kid" | "admin";
   title: string; subtitle?: string; accent?: string; brand?: React.ReactNode;
   nav: NavItem[]; active: string; onChange: (k: string) => void;
-  onExit: () => void; exitLabel?: string; children: React.ReactNode;
+  onExit: () => void; exitLabel?: string; headerRight?: React.ReactNode; children: React.ReactNode;
 }) {
   const dark = variant === "admin";
   const sideBg = dark ? "bg-navy text-white" : "bg-white text-navy border-r border-slate-200";
@@ -57,8 +57,13 @@ export function AppShell({
             <div className="font-extrabold tracking-tight truncate leading-none">{title}</div>
             {subtitle && <div className={`text-[11px] truncate ${dark ? "opacity-60" : "text-slate-400"}`}>{subtitle}</div>}
           </div>
-          <button onClick={onExit} className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg ${dark ? "bg-white/10" : "bg-slate-100"}`}><LogOut size={15} /> {exitLabel}</button>
+          <div className="flex items-center gap-1">
+            {headerRight}
+            <button onClick={onExit} className={`flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg ${dark ? "bg-white/10" : "bg-slate-100"}`}><LogOut size={15} /> {exitLabel}</button>
+          </div>
         </div>
+
+        {headerRight && <div className="hidden md:flex justify-end items-center px-8 pt-5 text-navy">{headerRight}</div>}
 
         <main className="flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 py-5 pb-28 md:pb-10">{children}</main>
 

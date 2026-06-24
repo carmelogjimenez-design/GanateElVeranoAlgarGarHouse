@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { sb } from "@/lib/supabase";
 import { loadAll, rpc } from "@/lib/helpers";
+import { registerSW } from "@/lib/push";
 import type { DB, Kid, Ctx, Screen } from "@/lib/types";
 import Lobby from "@/components/Lobby";
 import PinModal from "@/components/PinModal";
@@ -27,6 +28,7 @@ export default function Page() {
 
   useEffect(() => {
     refresh();
+    registerSW();
     sb.auth.getSession().then(({ data }) => setSession(data.session as Session));
     const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(s as Session));
     return () => sub.subscription.unsubscribe();

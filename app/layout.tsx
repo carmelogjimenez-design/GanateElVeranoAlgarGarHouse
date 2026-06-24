@@ -1,10 +1,14 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "Gánate el Verano",
   description: "Disfruta del verano… o quédate en casa.",
+  manifest: "/manifest.webmanifest",
+  icons: { icon: "/icon-192.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Gánate", statusBarStyle: "default" },
 };
+export const viewport: Viewport = { themeColor: "#0B1F3A" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
