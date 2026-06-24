@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { Card, Btn, Input } from "@/components/ui/atoms";
 import { sb } from "@/lib/supabase";
+import { rpc } from "@/lib/helpers";
 import { enablePush } from "@/lib/push";
 import AdminAccounts from "@/components/admin/AdminAccounts";
-import { Bell, Camera, UserCog, Zap, X } from "lucide-react";
+import { Bell, Camera, UserCog, Zap, X, AlertTriangle, RotateCcw } from "lucide-react";
 import type { Ctx } from "@/lib/types";
 
 export default function AdminSettings({ ctx }: { ctx: Ctx }) {
@@ -53,6 +54,16 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
   const applyToAll = async () => {
     const { error } = await sb.from("kids").update({ weekly_goal: f.weekly_goal_default }).neq("id", "00000000-0000-0000-0000-000000000000");
     flash(error ? error.message : "Objetivo aplicado a todos los hijos"); refresh();
+  };
+  const resetAll = async () => {
+    const t = prompt(
+      "Esto pondrá a CERO los puntos de TODOS los hijos, borrará el historial de puntos y reseteará las misiones (las de hoy se regeneran vacías).\n\nNO afecta a: medallas, asignaturas, recompensas configuradas ni cuentas.\n\nEscribe RESETEAR para confirmar:"
+    );
+    if (t === null) return;
+    if (t.trim().toUpperCase() !== "RESETEAR") { flash("Cancelado (no escribiste RESETEAR)"); return; }
+    if (!confirm("¿Seguro del todo? Esta acción NO se puede deshacer.")) return;
+    const { error } = await rpc("admin_reset_all", {});
+    flash(error ? error.message : "Hecho · puntos e historial a cero y misiones reseteadas"); refresh();
   };
   return (
     <div className="max-w-2xl space-y-4 pb-6">
@@ -119,6 +130,12 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
           <Input type="number" value={f.weekly_goal_default} onChange={(e) => setF({ ...f, weekly_goal_default: +e.target.value })} className="w-28" />
           <Btn variant="dark" className="flex-1" onClick={applyToAll}>Aplicar a todos</Btn>
         </div>
+      </Card>
+
+      <Card className="p-5 space-y-3" style={{ borderColor: "#FECACA" }}>
+        <div className="flex items-center gap-2"><AlertTriangle size={16} className="text-red-500" /><h3 className="font-bold text-red-600 tracking-tight">Zona peligrosa</h3></div>
+        <p className="text-sm text-slate-400 font-medium">Pone a cero los puntos de todos los hijos, borra el historial de puntos y resetea las misiones (las de hoy se regeneran vacías). Perfecto para empezar de cero una temporada nueva. <b className="text-navy">No afecta</b> a medallas, asignaturas, recompensas ni cuentas. No se puede deshacer.</p>
+        <Btn variant="danger" className="w-full flex items-center justify-center gap-2" onClick={resetAll}><RotateCcw size={16} /> Resetear puntos y misiones de todos</Btn>
       </Card>
     </div>
   );
