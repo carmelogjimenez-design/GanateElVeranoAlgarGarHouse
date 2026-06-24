@@ -19,9 +19,9 @@ const VARIANT: Record<Variant, string> = {
   danger: "bg-red-500 text-white",
   muted: "bg-slate-200 text-slate-500",
 };
-export const Btn = ({ children, onClick, variant = "primary", className = "" }:
-  { children: React.ReactNode; onClick?: () => void; variant?: Variant; className?: string }) => (
-  <button onClick={onClick} className={`${VARIANT[variant]} font-semibold rounded-xl px-4 py-3 text-[15px] active:scale-95 transition ${className}`}>{children}</button>
+export const Btn = ({ children, onClick, variant = "primary", className = "", disabled = false }:
+  { children: React.ReactNode; onClick?: () => void; variant?: Variant; className?: string; disabled?: boolean }) => (
+  <button onClick={onClick} disabled={disabled} className={`${VARIANT[variant]} font-semibold rounded-xl px-4 py-3 text-[15px] active:scale-95 transition disabled:opacity-50 disabled:active:scale-100 ${className}`}>{children}</button>
 );
 
 /* ---------- Chip / Pill ---------- */

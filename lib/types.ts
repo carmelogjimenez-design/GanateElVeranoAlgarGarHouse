@@ -27,7 +27,8 @@ export type Subject = { id: string; kid_id: string; name: string; level: string;
 export type StudySession = { id: string; kid_id: string; subject_id: string; seconds: number; day: string; created_at: string };
 export type PointEvent = { id: string; kid_id: string; delta: number; reason: string; type: string; ref_id: string | null; created_at: string };
 
-export type Settings = { id: number; team_goal: number; challenge_label: string; challenge_until: string | null; weekly_goal_default: number };
+export type Settings = { id: number; team_goal: number; challenge_label: string; challenge_until: string | null; weekly_goal_default: number; study_reward_points: number; study_goal_seconds: number };
+export type StudyReward = { id: string; kid_id: string; day: string; seconds: number; points: number; status: string; created_at: string; resolved_at: string | null };
 export type TaskTarget = { id: string; task_id: string; kid_id: string; created_at: string };
 export type Badge = { code: string; name: string; description: string; icon: string; color: string; sort: number };
 export type KidBadge = { id: string; kid_id: string; badge_code: string; earned_at: string };
@@ -37,7 +38,7 @@ export type DB = {
   rewards: Reward[]; redemptions: Redemption[]; gifts: Gift[];
   subjects: Subject[]; study_sessions: StudySession[]; point_events: PointEvent[];
   task_targets: TaskTarget[]; settings: Settings | null;
-  badges_catalog: Badge[]; kid_badges: KidBadge[];
+  badges_catalog: Badge[]; kid_badges: KidBadge[]; study_rewards: StudyReward[];
 };
 
 export type Screen = "lobby" | "kid" | "admin";

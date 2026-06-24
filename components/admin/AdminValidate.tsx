@@ -10,10 +10,11 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const asg = db.assignments.filter((a) => a.status === "pending");
   const red = db.redemptions.filter((r) => r.status === "pending");
   const gif = db.gifts.filter((g) => g.status === "pending");
+  const sr = db.study_rewards.filter((r) => r.status === "pending");
   const call = async (fn: string, args: Record<string, unknown>, msg: string) => {
     const { error } = await rpc(fn, args); flash(error ? error.message : msg); refresh();
   };
-  if (!asg.length && !red.length && !gif.length)
+  if (!asg.length && !red.length && !gif.length && !sr.length)
     return <Card className="p-8 text-center text-slate-400 font-medium">Nada pendiente. Reina la paz… por ahora.</Card>;
   return (
     <div className="space-y-5 pb-6">
@@ -70,6 +71,26 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
               </div>
             </Card>
           ))}
+        </Section>
+      )}
+      {sr.length > 0 && (
+        <Section title="Recompensas de estudio">
+          {sr.map((r) => {
+            const k = kidOf(r.kid_id);
+            return (
+              <Card key={r.id} className="p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  {k && <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />}
+                  <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">{k?.name} · 1 hora de estudio</div><div className="text-xs text-slate-400">{Math.floor(r.seconds / 60)} min estudiados el {r.day}</div></div>
+                  <Chip tone="brand">+{r.points} pts</Chip>
+                </div>
+                <div className="flex gap-2">
+                  <Btn variant="teal" className="flex-1" onClick={() => call("approve_study_reward", { p_id: r.id }, "Recompensa aprobada. +" + r.points + " pts")}>Aprobar</Btn>
+                  <Btn variant="ghost" className="flex-1" onClick={() => call("reject_study_reward", { p_id: r.id }, "Recompensa rechazada")}>Rechazar</Btn>
+                </div>
+              </Card>
+            );
+          })}
         </Section>
       )}
     </div>
