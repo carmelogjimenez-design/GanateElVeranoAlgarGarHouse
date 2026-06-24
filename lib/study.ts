@@ -1,12 +1,13 @@
 // Contenido de estudio curado (offline) por asignatura y nivel.
 // Detecta la materia por palabras clave del nombre y la banda por el nivel.
+import { getUnits } from "@/lib/curriculum";
 export type Quiz = { q: string; options: string[]; answer: number };
 export type StudyContent = { topics: string[]; quiz: Quiz[] };
 
-type Band = "primaria" | "eso" | "bach";
-type Group = "matematicas" | "lengua" | "ingles" | "sociales" | "ciencias" | "general";
+export type Band = "primaria" | "eso" | "bach";
+export type Group = "matematicas" | "lengua" | "ingles" | "sociales" | "ciencias" | "general";
 
-function detectGroup(name: string): Group {
+export function detectGroup(name: string): Group {
   const n = (name || "").toLowerCase();
   if (/mate|álgebra|algebra|geometr|cálculo|calculo/.test(n)) return "matematicas";
   if (/lengua|castellano|literatura|español|espanol/.test(n)) return "lengua";
@@ -15,7 +16,7 @@ function detectGroup(name: string): Group {
   if (/cienc|natural|biolog|f[íi]sica|fisica|qu[íi]mica|quimica/.test(n)) return "ciencias";
   return "general";
 }
-function detectBand(level: string): Band {
+export function detectBand(level: string): Band {
   const l = (level || "").toLowerCase();
   if (/primaria/.test(l)) return "primaria";
   if (/bachill|bach/.test(l)) return "bach";
@@ -261,13 +262,19 @@ function mathGen(band: Band): QQ {
 // Devuelve n preguntas evitando las ya vistas (sig en `seen`)
 export function getQuizQuestions(name: string, level: string, seen: Set<string>, n = 5): QQ[] {
   const g = detectGroup(name), b = detectBand(level);
+  // Preguntas del temario real (curriculum) para esta asignatura
+  const curr: QQ[] = getUnits(name, level).flatMap((u) => u.quiz.map((qz) => ({ q: qz.q, options: qz.options, answer: qz.answer, sig: sig("curr|" + u.id + "|" + qz.q) })));
+
   if (g === "matematicas") {
     const out: QQ[] = []; const used = new Set<string>(); let guard = 0;
+    // primero alguna del temario, luego infinitas generadas
+    for (const q of shuffle(curr)) { if (out.length >= Math.min(2, n)) break; if (!seen.has(q.sig) && !used.has(q.sig)) { used.add(q.sig); out.push(q); } }
     while (out.length < n && guard++ < 300) { const q = mathGen(b); if (seen.has(q.sig) || used.has(q.sig)) continue; used.add(q.sig); out.push(q); }
     return out;
   }
   const bank = (BANK[g][b] || BANK[g].eso || BANK.general.eso!).quiz;
-  const pool: QQ[] = bank.map((qz) => ({ q: qz.q, options: qz.options, answer: qz.answer, sig: sig(g + b + "|" + qz.q) }));
+  const bankQ: QQ[] = bank.map((qz) => ({ q: qz.q, options: qz.options, answer: qz.answer, sig: sig(g + b + "|" + qz.q) }));
+  const pool = [...curr, ...bankQ];
   const unseen = shuffle(pool.filter((p) => !seen.has(p.sig)));
   let res = unseen.slice(0, n);
   if (res.length < n) {

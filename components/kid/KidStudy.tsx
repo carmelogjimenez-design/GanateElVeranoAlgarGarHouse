@@ -3,7 +3,10 @@ import { useState, useEffect, useRef } from "react";
 import { Card, Btn, Chip, Bar, Modal, IconTile } from "@/components/ui/atoms";
 import { rpc, fmtMin, todayStr } from "@/lib/helpers";
 import { studyTodaySeconds } from "@/lib/game";
-import { getStudyContent, getQuizQuestions, sig, type QQ } from "@/lib/study";
+import { getQuizQuestions, sig, type QQ } from "@/lib/study";
+import { getUnits, type Unit } from "@/lib/curriculum";
+import { sfx } from "@/lib/sfx";
+import { confetti } from "@/lib/confetti";
 import { notifyParents } from "@/lib/push";
 import type { Ctx, Kid, Subject } from "@/lib/types";
 import { Play, Square, BookOpen, ListChecks, FileQuestion, Trophy, Clock, CheckCircle2, Sparkles, AlertTriangle } from "lucide-react";
@@ -113,21 +116,122 @@ function ConcentrationModal({ ctx, me, subject, onClose }: { ctx: Ctx; me: Kid; 
 }
 
 function TemarioModal({ subject, onClose }: { subject: Subject; onClose: () => void }) {
-  const content = getStudyContent(subject.name, subject.level);
+  const units = getUnits(subject.name, subject.level);
+  const storeKey = `gev_read_${subject.id}`;
+  const [read, setRead] = useState<string[]>([]);
+  const [open, setOpen] = useState<Unit | null>(null);
+  useEffect(() => { try { setRead(JSON.parse(localStorage.getItem(storeKey) || "[]")); } catch {} }, [storeKey]);
+  const markRead = (id: string) => { setRead((prev) => { const n = prev.includes(id) ? prev : [...prev, id]; try { localStorage.setItem(storeKey, JSON.stringify(n)); } catch {} return n; }); };
+
+  if (open) return <UnitView unit={open} isRead={read.includes(open.id)} onRead={() => { markRead(open.id); }} onBack={() => setOpen(null)} onClose={onClose} />;
+
   return (
-    <Modal title={`Temario · ${subject.name} (${subject.level})`} onClose={onClose}>
-      <div className="space-y-2">
-        {content.topics.map((t, i) => (
-          <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-3">
-            <div className="w-7 h-7 rounded-lg bg-teal/12 text-teal font-bold text-sm flex items-center justify-center shrink-0">{i + 1}</div>
-            <span className="font-medium text-navy text-sm">{t}</span>
+    <Modal title={`Temario · ${subject.name}`} onClose={onClose}>
+      {units.length === 0 ? (
+        <p className="text-slate-400 text-sm font-medium text-center py-6">Aún no hay temario para esta asignatura.</p>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-3">
+            <Bar v={read.length} max={units.length} c="#19D3AE" />
+            <span className="text-xs font-bold text-slate-400 shrink-0">{read.length}/{units.length}</span>
           </div>
-        ))}
-      </div>
-      <p className="text-xs text-slate-400 font-medium mt-4 text-center">Repasa estos puntos y luego ponte a prueba con el Test.</p>
+          <div className="space-y-2">
+            {units.map((u, i) => (
+              <button key={u.id} onClick={() => setOpen(u)} className="w-full flex items-center gap-3 bg-slate-50 hover:bg-slate-100 rounded-2xl px-3 py-3 text-left transition">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0" style={{ background: read.includes(u.id) ? "#19D3AE" : "#E2E8F0", color: read.includes(u.id) ? "#fff" : "#94A3B8" }}>{read.includes(u.id) ? "✓" : i + 1}</div>
+                <div className="flex-1 min-w-0"><div className="font-semibold text-navy text-sm truncate">{u.title}</div><div className="text-xs text-slate-400">{u.flashcards.length} tarjetas · {u.quiz.length} preguntas</div></div>
+                <ListChecks size={16} className="text-slate-300" />
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 font-medium mt-4 text-center">Lee el tema, repasa con tarjetas y ponte a prueba. Luego ve al Test para ganar puntos.</p>
+        </>
+      )}
     </Modal>
   );
 }
+
+function UnitView({ unit, isRead, onRead, onBack, onClose }: { unit: Unit; isRead: boolean; onRead: () => void; onBack: () => void; onClose: () => void }) {
+  const [tab, setTab] = useState<"leer" | "tarjetas" | "test">("leer");
+  return (
+    <Modal title={unit.title} onClose={onClose}>
+      <button onClick={onBack} className="text-sm font-semibold text-teal mb-3">← Volver al temario</button>
+      <div className="flex gap-1.5 mb-4 bg-slate-100 p-1 rounded-2xl">
+        {([["leer", "Resumen"], ["tarjetas", "Tarjetas"], ["test", "Mini-test"]] as const).map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} className={`flex-1 text-sm font-semibold py-2 rounded-xl transition ${tab === k ? "bg-white text-navy shadow-sm" : "text-slate-400"}`}>{l}</button>
+        ))}
+      </div>
+      {tab === "leer" && (
+        <div>
+          <div className="bg-teal/5 border border-teal/15 rounded-2xl p-4 text-navy font-medium leading-relaxed">{unit.summary}</div>
+          <Btn variant={isRead ? "muted" : "teal"} className="w-full mt-4 flex items-center justify-center gap-2" onClick={() => { onRead(); sfx("xp"); }}>{isRead ? "✓ Repasado" : "Marcar como repasado"}</Btn>
+        </div>
+      )}
+      {tab === "tarjetas" && <Flashcards cards={unit.flashcards} />}
+      {tab === "test" && <MiniTest quiz={unit.quiz} />}
+    </Modal>
+  );
+}
+
+function Flashcards({ cards }: { cards: { front: string; back: string }[] }) {
+  const [i, setI] = useState(0);
+  const [flip, setFlip] = useState(false);
+  const c = cards[i];
+  const go = (d: number) => { setFlip(false); setI((x) => (x + d + cards.length) % cards.length); sfx("tap"); };
+  return (
+    <div>
+      <button onClick={() => { setFlip((f) => !f); sfx("tap"); }} className="w-full h-44 rounded-3xl flex items-center justify-center text-center px-6 transition active:scale-[.98]" style={{ background: flip ? "linear-gradient(135deg,#0B1F3A,#13315c)" : "linear-gradient(135deg,#19D3AE,#0EA5A0)", color: "#fff" }}>
+        <div><div className="text-[11px] font-bold uppercase tracking-wider opacity-60 mb-2">{flip ? "Respuesta" : "Pregunta"}</div><div className="font-bold text-lg leading-snug">{flip ? c.back : c.front}</div></div>
+      </button>
+      <div className="text-center text-xs text-slate-400 font-medium mt-2">Toca la tarjeta para girarla · {i + 1}/{cards.length}</div>
+      <div className="flex gap-2 mt-3">
+        <Btn variant="ghost" className="flex-1" onClick={() => go(-1)}>Anterior</Btn>
+        <Btn variant="dark" className="flex-1" onClick={() => go(1)}>Siguiente</Btn>
+      </div>
+    </div>
+  );
+}
+
+function MiniTest({ quiz }: { quiz: { q: string; options: string[]; answer: number }[] }) {
+  const [i, setI] = useState(0);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
+  const [done, setDone] = useState(false);
+  const q = quiz[i];
+  const pick = (idx: number) => {
+    if (picked !== null) return;
+    setPicked(idx);
+    if (idx === q.answer) { setScore((s) => s + 1); sfx("complete"); } else sfx("reject");
+    setTimeout(() => {
+      if (i + 1 < quiz.length) { setI(i + 1); setPicked(null); }
+      else { setDone(true); if (score + (idx === q.answer ? 1 : 0) === quiz.length) confetti(); }
+    }, 800);
+  };
+  if (done) return (
+    <div className="text-center py-6">
+      <div className="text-5xl mb-2">{score === quiz.length ? "🏆" : score >= quiz.length / 2 ? "💪" : "📚"}</div>
+      <div className="font-extrabold text-navy text-xl">{score}/{quiz.length} aciertos</div>
+      <p className="text-slate-400 font-medium text-sm mt-1">{score === quiz.length ? "¡Perfecto! Te lo sabes." : "Repasa el resumen y vuelve a intentarlo."}</p>
+      <Btn variant="teal" className="mt-4" onClick={() => { setI(0); setPicked(null); setScore(0); setDone(false); }}>Repetir</Btn>
+    </div>
+  );
+  return (
+    <div>
+      <div className="text-xs font-bold text-slate-400 mb-2">Pregunta {i + 1}/{quiz.length}</div>
+      <div className="font-bold text-navy text-lg mb-3">{q.q}</div>
+      <div className="space-y-2">
+        {q.options.map((o, idx) => {
+          const right = picked !== null && idx === q.answer;
+          const wrong = picked === idx && idx !== q.answer;
+          return (
+            <button key={idx} onClick={() => pick(idx)} className="w-full text-left rounded-2xl px-4 py-3 font-semibold border-2 transition" style={{ borderColor: right ? "#19D3AE" : wrong ? "#EF4444" : "#E2E8F0", background: right ? "#19D3AE15" : wrong ? "#EF444415" : "#fff", color: "#0B1F3A" }}>{o}</button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 function TestModal({ ctx, me, subject, seen, onClose }: { ctx: Ctx; me: Kid; subject: Subject; seen: Set<string>; onClose: () => void }) {
   const { flash, refresh, kid } = ctx;
