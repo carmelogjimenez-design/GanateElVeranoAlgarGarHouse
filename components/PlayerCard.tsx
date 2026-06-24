@@ -34,7 +34,7 @@ export default function PlayerCard({ kid, db, size = "md" }: { kid: Kid; db: DB;
   );
 
   return (
-    <div className="gev-shine relative rounded-[26px] overflow-hidden mx-auto" style={{ width: big ? 300 : 248, background: f.base, boxShadow: `0 24px 60px -16px ${f.ring}66, inset 0 0 0 2px ${f.ring}, inset 0 0 60px rgba(255,255,255,.12)` }}>
+    <div className="gev-shine relative rounded-[26px] overflow-hidden mx-auto w-full" style={{ maxWidth: big ? 320 : 280, background: f.base, boxShadow: `0 24px 60px -16px ${f.ring}66, inset 0 0 0 2px ${f.ring}, inset 0 0 60px rgba(255,255,255,.12)` }}>
       {/* brillo superior */}
       <div className="absolute inset-x-0 top-0 h-1/2" style={{ background: `radial-gradient(120% 90% at 50% -20%, ${f.hi}, transparent 70%)` }} />
       {f.holo && <div className="absolute inset-0 opacity-40" style={{ background: "linear-gradient(115deg,transparent 30%,rgba(255,0,200,.25),rgba(0,255,200,.25),transparent 70%)" }} />}

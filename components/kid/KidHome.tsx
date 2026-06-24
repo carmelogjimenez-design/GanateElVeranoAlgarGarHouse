@@ -87,34 +87,26 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
         </div>
       </div>
 
-      {/* CARTA FUT (toca para verla en grande) */}
-      <button onClick={openCard} className="block mx-auto active:scale-[.98] transition gev-floaty">
-        <PlayerCard kid={me} db={db} size="md" />
-        <div className="text-center text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-wide">Toca para ver tu carta</div>
-      </button>
-
       {/* HERO GRID */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Nivel actual */}
-        <Card className="bg-navy border-navy text-white p-5">
-          <div className="text-[11px] font-semibold uppercase tracking-wide opacity-50">Nivel actual</div>
-          <div className="font-bold mt-0.5">{lvl} · {team?.name || "Sin equipo"}</div>
-          <div className="flex items-center gap-4 mt-3">
-            <Ring value={levelProgress(me.total_points)} size={96} stroke={9} color={me.color}>
-              <span className="text-2xl font-extrabold">{lvl}</span>
-            </Ring>
-            <div className="flex-1">
-              <div className="text-2xl font-extrabold leading-none">{Math.round(levelProgress(me.total_points) * 100)}%</div>
-              <div className="text-xs opacity-60 mb-2">para nivel {lvl + 1}</div>
+      <div className="grid gap-4 md:grid-cols-3 items-start">
+        {/* Carta + stats (columna izquierda del hero) */}
+        <div className="space-y-3">
+          <button onClick={openCard} className="block w-full active:scale-[.98] transition gev-floaty">
+            <PlayerCard kid={me} db={db} size="sm" />
+            <div className="text-center text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-wide">Toca para ver tu carta</div>
+          </button>
+          <Card className="bg-navy border-navy text-white p-4">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div><div className="flex items-center justify-center gap-1 text-brand"><Flame size={14} /><span className="font-bold">{streak}</span></div><div className="text-[10px] opacity-50 mt-0.5">RACHA</div></div>
+              <div><div className="flex items-center justify-center gap-1 text-teal"><Clock size={14} /><span className="font-bold">{studyH}h</span></div><div className="text-[10px] opacity-50 mt-0.5">ESTUDIO</div></div>
+              <div><div className="flex items-center justify-center gap-1"><Trophy size={14} className="text-yellow-400" /><span className="font-bold">#{rank}</span></div><div className="text-[10px] opacity-50 mt-0.5">RANKING</div></div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <div className="flex justify-between text-xs mb-1.5"><span className="opacity-60 font-medium">Nivel {lvl}</span><span className="font-bold">{Math.round(levelProgress(me.total_points) * 100)}% → Nv {lvl + 1}</span></div>
               <Bar v={me.total_points % 100} max={100} c={me.color} />
             </div>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/10 text-center">
-            <div><div className="flex items-center justify-center gap-1 text-brand"><Flame size={14} /><span className="font-bold">{streak}</span></div><div className="text-[10px] opacity-50 mt-0.5">RACHA</div></div>
-            <div><div className="flex items-center justify-center gap-1 text-teal"><Clock size={14} /><span className="font-bold">{studyH}h</span></div><div className="text-[10px] opacity-50 mt-0.5">ESTUDIO HOY</div></div>
-            <div><div className="flex items-center justify-center gap-1"><Trophy size={14} className="text-yellow-400" /><span className="font-bold">#{rank}</span></div><div className="text-[10px] opacity-50 mt-0.5">RANKING</div></div>
-          </div>
-        </Card>
+          </Card>
+        </div>
 
         {/* Tu equipo */}
         <Card className="text-white p-5 border-0" style={{ background: team?.color || "#19D3AE" }}>
