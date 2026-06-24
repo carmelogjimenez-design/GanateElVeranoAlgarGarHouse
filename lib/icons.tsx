@@ -1,9 +1,9 @@
 import {
   BedDouble, CookingPot, ShowerHead, Waves, WashingMachine, Sparkles, Sofa,
   Car, Trash2, Trees, UtensilsCrossed, BookOpen, Target, DoorOpen, Shirt,
+  Flame, PawPrint, PenLine, SprayCan, Sprout, Boxes, GlassWater, Dumbbell,
   type LucideIcon,
 } from "lucide-react";
-
 export function missionIcon(text: string): LucideIcon {
   const t = (text || "").toLowerCase();
   if (/cama|habitaci|dormitor|base/.test(t)) return BedDouble;
@@ -19,12 +19,20 @@ export function missionIcon(text: string): LucideIcon {
   if (/jard|c(é|e)sped|terraza|patio/.test(t)) return Trees;
   if (/puerta|entrada|escaler/.test(t)) return DoorOpen;
   if (/plancha|doblar|camis/.test(t)) return Shirt;
-  if (/estudi|matem|lengua|hist|ingl/.test(t)) return BookOpen;
+  if (/barbacoa|parrilla|brasa/.test(t)) return Flame;
+  if (/mascota|perro|gato|pez|animal|pasear/.test(t)) return PawPrint;
+  if (/deber|colegio|escuela|examen|repas/.test(t)) return PenLine;
+  if (/fregar|fregona|limpi|aspir|barrer|polvo|mopa/.test(t)) return SprayCan;
+  if (/regar|planta|maceta|huerto|flor/.test(t)) return Sprout;
+  if (/s(ó|o)tano|trastero|garaje|caja|ordenar|guardar/.test(t)) return Boxes;
+  if (/vaso|bebida|hidrat|beber/.test(t)) return GlassWater;
+  if (/deporte|ejercicio|gimnas|entren|correr|pesas/.test(t)) return Dumbbell;
+  if (/estudi|matem|lengua|hist|ingl|cienc|geograf/.test(t)) return BookOpen;
   return Target;
 }
 
 import {
-  Flame, Brain, Star, Medal, Timer, Crown, Award,
+  Brain, Star, Medal, Timer, Crown, Award,
   Cat, Dog, Rabbit, Bird, Fish, Ghost, Rocket, Gamepad2, Bot, Origami,
 } from "lucide-react";
 

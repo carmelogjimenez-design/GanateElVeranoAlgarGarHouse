@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, Btn, Input } from "@/components/ui/atoms";
 import { sb } from "@/lib/supabase";
 import { enablePush } from "@/lib/push";
-import { Bell } from "lucide-react";
+import { Bell, Camera, UserCog } from "lucide-react";
 import type { Ctx } from "@/lib/types";
 
 export default function AdminSettings({ ctx }: { ctx: Ctx }) {
@@ -13,6 +13,16 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
     const uid = (session as { user?: { id?: string } } | null)?.user?.id;
     if (!uid) { setPushMsg("Inicia sesión como padre para activar avisos."); return; }
     const r = await enablePush(uid); setPushMsg(r.msg);
+  };
+  const [photo, setPhoto] = useState("");
+  const uploadProfile = async (file: File) => {
+    const uid = (session as { user?: { id?: string } } | null)?.user?.id;
+    if (!uid) { flash("Inicia sesión para subir tu foto"); return; }
+    const { error } = await sb.storage.from("avatars").upload(`parent/${uid}.jpg`, file, { upsert: true });
+    if (error) { flash("No se pudo subir la foto"); return; }
+    const url = sb.storage.from("avatars").getPublicUrl(`parent/${uid}.jpg`).data.publicUrl + "?t=" + Date.now();
+    await sb.from("profiles").update({ avatar_url: url }).eq("id", uid);
+    setPhoto(url); flash("Foto de perfil actualizada");
   };
   const s = db.settings;
   const [f, setF] = useState({
@@ -37,6 +47,19 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
   };
   return (
     <div className="max-w-2xl space-y-4 pb-6">
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-3"><UserCog size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight">Tu perfil</h3></div>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center shrink-0">
+            {photo ? <img src={photo} alt="perfil" className="w-full h-full object-cover" /> : <UserCog size={26} className="text-slate-300" />}
+          </div>
+          <div className="flex-1">
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-navy border border-slate-200 rounded-xl px-3 py-2 cursor-pointer hover:border-brand"><Camera size={16} /> Subir foto<input type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && uploadProfile(e.target.files[0])} /></label>
+            <p className="text-xs text-slate-400 font-medium mt-2">Crea o elimina hijos en la pestaña <b>Hijos</b>. Los que no tienen móvil los creas tú con PIN; los que tienen móvil podrán registrarse con su email.</p>
+          </div>
+        </div>
+      </Card>
+
       <Card className="p-5 space-y-3">
         <div className="flex items-center gap-2"><Bell size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight">Avisos push</h3></div>
         <p className="text-sm text-slate-400 font-medium">Activa las notificaciones en este dispositivo para enterarte al instante cuando un hijo complete algo que validar. En el móvil, instala antes la app (botón "Añadir a pantalla de inicio").</p>

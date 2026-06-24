@@ -42,11 +42,12 @@ export const Bar = ({ v, max, c = "#FF8A00" }: { v: number; max: number; c?: str
 
 /* ---------- Avatar (icono desbloqueable o monograma) ---------- */
 export const Avatar = ({ name, color, size = 40, avatar }: { name: string; color: string; size?: number; avatar?: string }) => {
-  const Icon = avatar ? avatarIcon(avatar) : null;
+  const isUrl = !!avatar && /^https?:\/\//.test(avatar);
+  const Icon = avatar && !isUrl ? avatarIcon(avatar) : null;
   return (
     <div style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}
-      className="rounded-2xl flex items-center justify-center text-white font-bold shrink-0">
-      {Icon ? <Icon size={size * 0.55} /> : initials(name)}
+      className="rounded-2xl flex items-center justify-center text-white font-bold shrink-0 overflow-hidden">
+      {isUrl ? <img src={avatar} alt={name} className="w-full h-full object-cover" /> : Icon ? <Icon size={size * 0.55} /> : initials(name)}
     </div>
   );
 };

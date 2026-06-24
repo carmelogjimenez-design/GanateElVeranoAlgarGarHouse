@@ -40,6 +40,8 @@ function KidEditModal({ ctx, kid, onClose }: { ctx: Ctx; kid: Kid; onClose: () =
         <label className="flex items-center gap-2 text-sm font-medium text-navy"><input type="checkbox" checked={f.app_access} onChange={(e) => setF({ ...f, app_access: e.target.checked })} className="accent-teal w-4 h-4" /> Tiene acceso a la app (móvil propio)</label>
       </div>
       <Btn variant="primary" className="w-full" onClick={save}>Guardar</Btn>
+      <button onClick={async () => { if (confirm(`¿Eliminar a ${kid.name}? Se borrarán sus misiones y puntos. Esta acción no se puede deshacer.`)) { await sb.from("kids").delete().eq("id", kid.id); flash("Hijo eliminado"); refresh(); onClose(); } }}
+        className="w-full mt-2 text-sm font-semibold text-red-400 hover:text-red-500 py-2">Eliminar hijo</button>
 
       {kid.study_enabled && (
         <div className="mt-5 border-t border-slate-100 pt-4">

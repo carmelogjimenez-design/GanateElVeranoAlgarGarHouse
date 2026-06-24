@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Avatar, Modal } from "@/components/ui/atoms";
 import { rpc } from "@/lib/helpers";
+import { sb } from "@/lib/supabase";
 import { levelOf } from "@/lib/game";
 import { AVATARS, badgeIcon } from "@/lib/icons";
 import KidHome from "@/components/kid/KidHome";
@@ -12,7 +13,7 @@ import KidStudy from "@/components/kid/KidStudy";
 import RankingList from "@/components/RankingList";
 import Celebration from "@/components/Celebration";
 import type { Ctx } from "@/lib/types";
-import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sun, Sparkles, Lock } from "lucide-react";
+import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera } from "lucide-react";
 
 type Celeb = { icon: React.ReactNode; title: string; subtitle?: string; color?: string };
 
@@ -50,6 +51,13 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const chooseAvatar = async (key: string) => {
     const { error } = await rpc("set_avatar", { p_kid: me.id, p_pin: kid!.pin, p_avatar: key });
     if (error) flash(error.message); else { refresh(); setAvatarOpen(false); }
+  };
+  const uploadPhoto = async (file: File) => {
+    const path = `${me.id}/${Date.now()}.jpg`;
+    const { error: upErr } = await sb.storage.from("avatars").upload(path, file, { upsert: true });
+    if (upErr) { flash("No se pudo subir la foto"); return; }
+    const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+    await chooseAvatar(url);
   };
 
   const nav: [string, string, typeof Home][] = [["inicio", "Inicio", Home], ["tareas", "Misiones", ClipboardList]];
@@ -100,7 +108,8 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
 
       {avatarOpen && (
         <Modal title="Elige tu avatar" onClose={() => setAvatarOpen(false)}>
-          <p className="text-sm text-slate-400 font-medium mb-3">Desbloqueas avatares al subir de nivel. Estás en el nivel {myLevel}.</p>
+          <p className="text-sm text-slate-400 font-medium mb-3">Sube tu propia foto o elige un avatar (se desbloquean al subir de nivel). Estás en el nivel {myLevel}.</p>
+          <label className="flex items-center justify-center gap-2 w-full mb-4 border-2 border-dashed border-slate-200 rounded-2xl py-3.5 text-sm font-semibold text-navy cursor-pointer hover:border-brand transition"><Camera size={18} /> Subir una foto<input type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0])} /></label>
           <div className="grid grid-cols-4 gap-3">
             {AVATARS.map((a) => {
               const unlocked = myLevel >= a.level;

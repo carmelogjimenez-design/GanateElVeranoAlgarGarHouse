@@ -11,23 +11,53 @@ function AssignModal({ ctx, task, onClose }: { ctx: Ctx; task: Task; onClose: ()
   const { db, refresh, flash } = ctx;
   const [sel, setSel] = useState<string[]>([]);
   const [due, setDue] = useState(todayStr());
+  const [grupal, setGrupal] = useState(false);
+  const [team, setTeam] = useState("");
   const toggle = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const assign = async () => {
+    if (grupal) {
+      const members = db.kids.filter((k) => k.team_id === team && k.active);
+      if (!team || !members.length) { flash("Elige un equipo con miembros"); return; }
+      const gid = crypto.randomUUID();
+      const rows = members.map((k) => ({ task_id: task.id, kid_id: k.id, title: task.title, points: task.points, photo_required: task.photo_required, due_date: due, team_id: team, group_id: gid, grupal: true }));
+      const { error } = await sb.from("assignments").insert(rows);
+      flash(error ? error.message : `Misión de equipo asignada · suma a ${rows.length}`);
+      if (!error) { refresh(); onClose(); }
+      return;
+    }
     const rows = sel.map((kid_id) => ({ task_id: task.id, kid_id, title: task.title, points: task.points, photo_required: task.photo_required, due_date: due, team_id: db.kids.find((k) => k.id === kid_id)?.team_id ?? null }));
     const { error } = await sb.from("assignments").insert(rows);
     flash(error ? error.message : `Asignada a ${rows.length} hijo(s)`);
     if (!error) { refresh(); onClose(); }
   };
   return (
-    <Modal title={`Asignar (una vez): ${task.title}`} onClose={onClose}>
+    <Modal title={`Asignar: ${task.title}`} onClose={onClose}>
       <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="mb-3" />
-      <div className="flex flex-wrap gap-2 mb-3">
-        {db.teams.map((t) => <button key={t.id} onClick={() => { const ids = db.kids.filter((k) => k.team_id === t.id).map((k) => k.id); setSel((s) => [...new Set([...s, ...ids])]); }} className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-white" style={{ background: t.color }}>+ {t.name}</button>)}
-      </div>
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        {db.kids.map((k) => <button key={k.id} onClick={() => toggle(k.id)} className={`rounded-xl p-2 text-sm font-semibold border ${sel.includes(k.id) ? "border-brand bg-orange-50 text-navy" : "border-slate-200 bg-slate-50 text-slate-500"}`}>{k.name}</button>)}
-      </div>
-      <Btn variant="primary" className="w-full" onClick={() => sel.length && assign()}>Asignar a {sel.length}</Btn>
+      <label className="flex items-center gap-2 text-sm font-medium text-navy mb-3 bg-slate-50 rounded-xl px-3 py-2.5">
+        <input type="checkbox" checked={grupal} onChange={(e) => setGrupal(e.target.checked)} className="accent-brand w-4 h-4" />
+        Misión de equipo (al validarla suma a todo el equipo)
+      </label>
+      {grupal ? (
+        <>
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {db.teams.map((t) => {
+              const n = db.kids.filter((k) => k.team_id === t.id && k.active).length;
+              return <button key={t.id} onClick={() => setTeam(t.id)} className={`rounded-xl p-3 text-sm font-semibold border text-left ${team === t.id ? "border-brand bg-orange-50 text-navy" : "border-slate-200 bg-slate-50 text-slate-500"}`}><span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full" style={{ background: t.color }} />{t.name}</span><span className="text-xs text-slate-400">{n} miembros</span></button>;
+            })}
+          </div>
+          <Btn variant="primary" className="w-full" onClick={assign}>Asignar al equipo</Btn>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2 mb-3">
+            {db.teams.map((t) => <button key={t.id} onClick={() => { const ids = db.kids.filter((k) => k.team_id === t.id).map((k) => k.id); setSel((s) => [...new Set([...s, ...ids])]); }} className="text-xs font-semibold px-2.5 py-1.5 rounded-lg text-white" style={{ background: t.color }}>+ {t.name}</button>)}
+          </div>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {db.kids.map((k) => <button key={k.id} onClick={() => toggle(k.id)} className={`rounded-xl p-2 text-sm font-semibold border ${sel.includes(k.id) ? "border-brand bg-orange-50 text-navy" : "border-slate-200 bg-slate-50 text-slate-500"}`}>{k.name}</button>)}
+          </div>
+          <Btn variant="primary" className="w-full" onClick={() => sel.length && assign()}>Asignar a {sel.length}</Btn>
+        </>
+      )}
     </Modal>
   );
 }
