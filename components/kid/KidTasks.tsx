@@ -1,8 +1,10 @@
 "use client";
-import { Chip, Btn } from "@/components/ui/atoms";
+import { Card, Chip, Btn, IconTile } from "@/components/ui/atoms";
 import { COPY, pick } from "@/lib/copy";
 import { rpc } from "@/lib/helpers";
+import { missionIcon } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
+import { Check, Clock, CheckCircle2 } from "lucide-react";
 
 export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Assignment[] }) {
   const { flash, refresh, kid } = ctx;
@@ -14,24 +16,39 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
     if (error) flash(error.message); else { flash(pick(COPY.done)); refresh(); }
   };
   return (
-    <div className="space-y-3 pb-6">
-      {pending.length === 0 && <p className="text-slate-400 font-semibold text-center py-6">{pick(COPY.noTasks)}</p>}
-      {pending.map((a) => (
-        <div key={a.id} className="bg-white rounded-3xl p-4 shadow-sm">
-          <div className="flex justify-between"><span className="font-black">{a.title}</span><Chip>{a.points} pts</Chip></div>
-          {a.status === "rejected" && <p className="text-red-500 text-xs font-bold mt-1">Rechazada antes. A la segunda va la vencida.</p>}
-          <Btn className="w-full mt-3" onClick={() => mark(a)}>Marcar como hecha</Btn>
-        </div>
-      ))}
+    <div className="space-y-2.5 pb-6">
+      <h3 className="font-bold text-navy tracking-tight px-0.5 mb-1">Misiones de hoy</h3>
+      {pending.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">{pick(COPY.noTasks)}</Card>}
+      {pending.map((a) => {
+        const Icon = missionIcon(a.title);
+        return (
+          <Card key={a.id} className="p-4">
+            <div className="flex items-center gap-3">
+              <IconTile color={me.color}><Icon size={20} /></IconTile>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-navy truncate">{a.title}</div>
+                {a.status === "rejected"
+                  ? <div className="text-xs font-medium text-red-500 mt-0.5">Rechazada. A la segunda va la vencida.</div>
+                  : <Chip tone="brand">+{a.points} XP</Chip>}
+              </div>
+              <Btn variant="primary" className="px-3 py-2.5" onClick={() => mark(a)}><Check size={18} /></Btn>
+            </div>
+          </Card>
+        );
+      })}
       {wait.map((a) => (
-        <div key={a.id} className="bg-amber-100 rounded-3xl p-3 flex justify-between items-center">
-          <span className="font-bold text-amber-800">⏳ {a.title}</span><span className="text-xs font-bold text-amber-700">En revisión</span>
-        </div>
+        <Card key={a.id} className="p-3.5 flex items-center gap-3">
+          <IconTile color="#F59E0B"><Clock size={18} /></IconTile>
+          <span className="font-medium text-navy flex-1 truncate">{a.title}</span>
+          <Chip tone="amber">En revisión</Chip>
+        </Card>
       ))}
       {done.map((a) => (
-        <div key={a.id} className="bg-green-100 rounded-3xl p-3 flex justify-between items-center">
-          <span className="font-bold text-green-800">✅ {a.title}</span><span className="text-xs font-bold text-green-700">+{a.points}</span>
-        </div>
+        <Card key={a.id} className="p-3.5 flex items-center gap-3 opacity-70">
+          <IconTile color="#22C55E"><CheckCircle2 size={18} /></IconTile>
+          <span className="font-medium text-navy flex-1 truncate line-through decoration-slate-300">{a.title}</span>
+          <Chip tone="green">+{a.points} XP</Chip>
+        </Card>
       ))}
     </div>
   );

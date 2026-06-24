@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
-import { Btn } from "@/components/ui/atoms";
+import { Card, Btn, Input, Avatar } from "@/components/ui/atoms";
 import { rpc } from "@/lib/helpers";
 import type { Ctx, Kid } from "@/lib/types";
+import { ArrowRight } from "lucide-react";
 
 export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const { db, flash, refresh, kid } = ctx;
@@ -16,27 +17,31 @@ export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
   };
   return (
     <div className="pb-6">
-      <div className="bg-white rounded-3xl p-4 shadow-sm space-y-2">
-        <p className="font-bold text-sm text-slate-500">Regala / ofrece puntos a un hermano (p. ej. &quot;te pago 5 por mi baño&quot;).</p>
-        <select value={to} onChange={(e) => setTo(e.target.value)} className="w-full border-2 rounded-2xl px-3 py-3 font-bold">
+      <h3 className="font-bold text-navy tracking-tight px-0.5 mb-3">Mercado entre hermanos</h3>
+      <Card className="p-4 space-y-2.5">
+        <p className="text-sm text-slate-400 font-medium">Ofrece XP a un hermano (ej. &quot;te pago 5 XP por mi misión&quot;).</p>
+        <select value={to} onChange={(e) => setTo(e.target.value)} className="w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-[15px] font-medium">
           <option value="">¿A quién?</option>
-          {db.kids.filter((k) => k.id !== me.id).map((k) => <option key={k.id} value={k.id}>{k.emoji} {k.name}</option>)}
+          {db.kids.filter((k) => k.id !== me.id).map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
         </select>
-        <input value={pts} onChange={(e) => setPts(e.target.value)} inputMode="numeric" placeholder="Puntos" className="w-full border-2 rounded-2xl px-3 py-3" />
-        <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Motivo (opcional)" className="w-full border-2 rounded-2xl px-3 py-3" />
-        <Btn className="w-full" onClick={() => to && pts && send()}>Enviar oferta</Btn>
+        <Input value={pts} onChange={(e) => setPts(e.target.value)} inputMode="numeric" placeholder="XP a ofrecer" />
+        <Input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Motivo (opcional)" />
+        <Btn variant="primary" className="w-full flex items-center justify-center gap-2" onClick={() => to && pts && send()}>Enviar oferta <ArrowRight size={16} /></Btn>
+      </Card>
+      <h4 className="font-semibold text-navy text-sm mt-5 mb-2 px-0.5">Tus movimientos</h4>
+      <div className="space-y-2">
+        {db.gifts.filter((g) => g.from_kid === me.id || g.to_kid === me.id).map((g) => {
+          const out = g.from_kid === me.id;
+          const other = db.kids.find((k) => k.id === (out ? g.to_kid : g.from_kid));
+          return (
+            <Card key={g.id} className="p-3 flex items-center gap-3">
+              {other && <Avatar name={other.name} color={other.color} size={32} />}
+              <span className="text-sm font-medium text-navy flex-1">{out ? "Para" : "De"} {other?.name}</span>
+              <span className={`text-sm font-bold ${out ? "text-red-500" : "text-teal"}`}>{out ? "-" : "+"}{g.points} XP</span>
+            </Card>
+          );
+        })}
       </div>
-      <h3 className="font-black mt-4 mb-2">Tus movimientos</h3>
-      {db.gifts.filter((g) => g.from_kid === me.id || g.to_kid === me.id).map((g) => {
-        const out = g.from_kid === me.id;
-        const other = db.kids.find((k) => k.id === (out ? g.to_kid : g.from_kid));
-        return (
-          <div key={g.id} className="bg-white rounded-3xl p-3 mb-2 flex justify-between text-sm font-bold">
-            <span>{out ? "➡️ Para" : "⬅️ De"} {other?.name}</span>
-            <span>{out ? "-" : "+"}{g.points} · {g.status}</span>
-          </div>
-        );
-      })}
     </div>
   );
 }

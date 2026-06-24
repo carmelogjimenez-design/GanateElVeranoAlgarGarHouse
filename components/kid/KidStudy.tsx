@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Chip, Btn } from "@/components/ui/atoms";
+import { Card, Btn, Chip } from "@/components/ui/atoms";
 import { rpc, fmtMin, last7 } from "@/lib/helpers";
 import type { Ctx, Kid } from "@/lib/types";
+import { Play, Square, BookOpen } from "lucide-react";
 
 export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const { db, flash, refresh, kid } = ctx;
@@ -17,30 +18,40 @@ export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const stop = async () => {
     if (!run) return;
     await rpc("log_study", { p_kid: me.id, p_pin: kid!.pin, p_subject: run.id, p_seconds: sec });
-    flash(`Has estudiado ${Math.floor(sec / 60)} min. La ciencia sigue sin explicarlo.`);
+    flash(`${Math.floor(sec / 60)} min de estudio registrados.`);
     setRun(null); setSec(0); refresh();
   };
-  const weekSec = (id: string) =>
-    db.study_sessions.filter((s) => s.subject_id === id && last7(s.created_at)).reduce((a, b) => a + b.seconds, 0);
+  const weekSec = (id: string) => db.study_sessions.filter((s) => s.subject_id === id && last7(s.created_at)).reduce((a, b) => a + b.seconds, 0);
   return (
-    <div className="space-y-3 pb-6">
-      {mine.length === 0 && <p className="text-slate-400 font-semibold text-center py-6">Sin asignaturas todavía. Disfrútalo.</p>}
-      {mine.map((s) => (
-        <div key={s.id} className="bg-white rounded-3xl p-4 shadow-sm">
-          <div className="flex justify-between"><span className="font-black">{s.name}</span><Chip c="#8b5cf6">{s.level}</Chip></div>
-          <div className="text-xs text-slate-500 mt-1">Total {fmtMin(s.total_seconds)} · Semana {fmtMin(weekSec(s.id))}</div>
-          {run?.id === s.id ? (
-            <div className="mt-3 flex items-center gap-3">
-              <span className="text-2xl font-black tabular-nums">
-                {String(Math.floor(sec / 60)).padStart(2, "0")}:{String(sec % 60).padStart(2, "0")}
-              </span>
-              <Btn c="bg-red-500" className="flex-1" onClick={stop}>⏹ Finalizar</Btn>
+    <div className="space-y-2.5 pb-6">
+      <h3 className="font-bold text-navy tracking-tight px-0.5 mb-1">Modo estudio</h3>
+      {mine.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">Sin asignaturas todavía.</Card>}
+      {mine.map((s) => {
+        const running = run?.id === s.id;
+        return (
+          <Card key={s.id} className={`p-4 ${running ? "ring-2 ring-teal border-teal" : ""}`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-teal/12 text-teal flex items-center justify-center"><BookOpen size={20} /></div>
+              <div className="flex-1">
+                <div className="font-semibold text-navy">{s.name}</div>
+                <div className="text-xs text-slate-400 mt-0.5">Total {fmtMin(s.total_seconds)} · Semana {fmtMin(weekSec(s.id))}</div>
+              </div>
+              <Chip tone="teal">{s.level}</Chip>
             </div>
-          ) : (
-            <Btn c="bg-violet-500" className="w-full mt-3" onClick={() => { setRun({ id: s.id, start: Date.now() }); setSec(0); }}>▶ Empezar a estudiar</Btn>
-          )}
-        </div>
-      ))}
+            {running ? (
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex-1 text-center">
+                  <div className="text-4xl font-extrabold tabular-nums text-navy">{String(Math.floor(sec / 60)).padStart(2, "0")}:{String(sec % 60).padStart(2, "0")}</div>
+                  <div className="text-[11px] font-medium text-slate-400 mt-0.5">Modo concentración</div>
+                </div>
+                <Btn variant="danger" className="flex items-center gap-2" onClick={stop}><Square size={16} /> Finalizar</Btn>
+              </div>
+            ) : (
+              <Btn variant="teal" className="w-full mt-3 flex items-center justify-center gap-2" onClick={() => { setRun({ id: s.id, start: Date.now() }); setSec(0); }}><Play size={18} /> Iniciar sesión</Btn>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 }
