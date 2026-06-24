@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Card, Btn, Input } from "@/components/ui/atoms";
 import { sb } from "@/lib/supabase";
 import { enablePush } from "@/lib/push";
+import AdminAccounts from "@/components/admin/AdminAccounts";
 import { Bell, Camera, UserCog, Zap, X } from "lucide-react";
 import type { Ctx } from "@/lib/types";
 
@@ -55,6 +56,7 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
   };
   return (
     <div className="max-w-2xl space-y-4 pb-6">
+      <AdminAccounts />
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3"><UserCog size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight">Tu perfil</h3></div>
         <div className="flex items-center gap-4">
