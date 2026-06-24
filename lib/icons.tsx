@@ -57,3 +57,15 @@ export const AVATARS: AvatarDef[] = [
   { key: "crown", Icon: Crown, level: 12, name: "Corona" },
 ];
 export const avatarIcon = (key: string): LucideIcon | null => AVATARS.find((a) => a.key === key)?.Icon || null;
+
+// Colores y etiquetas por frecuencia (esquema de la casa)
+export const FREQ_META: Record<string, { color: string; label: string; diff: string }> = {
+  diaria: { color: "#22C55E", label: "Diaria", diff: "Fácil" },
+  "2/semana": { color: "#F59E0B", label: "2×semana", diff: "Por equipo" },
+  semanal: { color: "#14B8A6", label: "Semanal", diff: "Media" },
+  quincenal: { color: "#3B82F6", label: "Cada 2 semanas", diff: "Media" },
+  mensual: { color: "#EF4444", label: "Mensual", diff: "Máxima" },
+  personalizada: { color: "#94A3B8", label: "Personalizada", diff: "—" },
+};
+export const freqColor = (f: string) => FREQ_META[f]?.color || "#94A3B8";
+export const scopeLabel = (scope?: string) => (scope === "open" ? "Cualquiera" : "Por equipo");

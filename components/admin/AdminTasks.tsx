@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, Btn, Modal, Input, Chip, IconTile } from "@/components/ui/atoms";
 import { sb } from "@/lib/supabase";
 import { rpc, todayStr } from "@/lib/helpers";
-import { missionIcon } from "@/lib/icons";
+import { missionIcon, freqColor, FREQ_META, scopeLabel } from "@/lib/icons";
 import type { Ctx, Task } from "@/lib/types";
 import { Plus, Trash2, Repeat, CalendarClock } from "lucide-react";
 
@@ -92,7 +92,8 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
   const [recTask, setRecTask] = useState<Task | null>(null);
   const create = async () => {
     if (!f.title) return;
-    const { error } = await sb.from("tasks").insert(f);
+    const scope = ["quincenal", "mensual"].includes(f.frequency) ? "open" : "team";
+    const { error } = await sb.from("tasks").insert({ ...f, scope });
     flash(error ? error.message : "Misión creada");
     if (!error) { setF({ ...f, title: "", description: "" }); refresh(); }
   };
@@ -120,6 +121,16 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
         <Btn variant="primary" className="w-full flex items-center justify-center gap-1.5" onClick={create}><Plus size={17} /> Crear misión</Btn>
       </Card>
 
+      <Card className="p-3.5 mb-4">
+        <div className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">Leyenda</div>
+        <div className="grid grid-cols-2 gap-2 text-xs font-medium text-slate-500">
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full" style={{ background: "#22C55E" }} /> Verde · diaria, fácil</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full" style={{ background: "#F59E0B" }} /> Amarillo · 2×semana, equipo</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full" style={{ background: "#3B82F6" }} /> Azul · media, cualquiera</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full" style={{ background: "#EF4444" }} /> Rojo · máxima/mes, cualquiera</span>
+        </div>
+      </Card>
+
       <div className="flex items-center justify-between mb-3 px-0.5">
         <h3 className="font-bold text-navy tracking-tight">Catálogo de misiones ({db.tasks.length})</h3>
         <Btn variant="teal" className="text-sm py-2 flex items-center gap-1.5" onClick={generate}><CalendarClock size={15} /> Generar hoy</Btn>
@@ -129,24 +140,27 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
         if (!group.length) return null;
         return (
           <div key={freq} className="mb-5">
-            <div className="flex items-center gap-2 mb-2 px-0.5"><span className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</span><span className="text-xs font-semibold text-slate-300">· {group.length}</span></div>
+            <div className="flex items-center gap-2 mb-2 px-0.5"><span className="w-2.5 h-2.5 rounded-full" style={{ background: freqColor(freq) }} /><span className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</span><span className="text-xs font-semibold text-slate-300">· {group.length}</span></div>
             <div className="space-y-2.5">
               {group.map((t) => {
                 const Icon = missionIcon(t.title);
                 const targets = db.task_targets.filter((tt) => tt.task_id === t.id).length;
-                const diffColor = t.difficulty === "dificil" ? "#EF4444" : t.difficulty === "media" ? "#FF8A00" : "#22C55E";
+                const col = freqColor(t.frequency);
+                const open = t.scope === "open";
                 return (
-                  <Card key={t.id} className="p-3.5">
+                  <Card key={t.id} className="p-3.5" style={{ borderLeft: `4px solid ${col}` }}>
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: diffColor }}><Icon size={22} /></div>
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: col }}><Icon size={22} /></div>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-navy truncate">{t.title}</div>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-lg pl-1.5 pr-1 py-0.5">
-                            <span className="text-brand font-bold text-xs">+</span>
-                            <input type="number" defaultValue={t.points} onBlur={(e) => savePoints(t.id, +e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="w-10 bg-transparent text-brand font-bold text-sm text-center outline-none" />
-                            <span className="text-brand font-bold text-xs">XP</span>
+                          <div className="flex items-center gap-1 rounded-lg pl-1.5 pr-1 py-0.5" style={{ background: `${col}18`, border: `1px solid ${col}55` }}>
+                            <span className="font-bold text-xs" style={{ color: col }}>+</span>
+                            <input type="number" defaultValue={t.points} onBlur={(e) => savePoints(t.id, +e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="w-10 bg-transparent font-bold text-sm text-center outline-none" style={{ color: col }} />
+                            <span className="font-bold text-xs" style={{ color: col }}>XP</span>
                           </div>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={{ background: open ? "#EFF6FF" : "#F1F5F9", color: open ? "#2563EB" : "#64748B" }}>{open ? "Cualquiera" : "Por equipo"}</span>
+                          {FREQ_META[t.frequency] && <span className="text-[11px] font-semibold text-slate-400">{FREQ_META[t.frequency].diff}</span>}
                           {t.photo_required && <Chip tone="amber">foto</Chip>}
                           {targets > 0 && <Chip tone="teal">recurrente · {targets}</Chip>}
                         </div>

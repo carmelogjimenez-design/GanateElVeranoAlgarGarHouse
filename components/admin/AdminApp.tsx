@@ -22,7 +22,8 @@ export default function AdminApp({ ctx }: { ctx: Ctx }) {
     db.assignments.filter((a) => a.status === "pending").length +
     db.redemptions.filter((r) => r.status === "pending").length +
     db.gifts.filter((g) => g.status === "pending").length +
-    db.study_rewards.filter((r) => r.status === "pending").length;
+    db.study_rewards.filter((r) => r.status === "pending").length +
+    db.kids.filter((k) => k.user_id && k.status === "pending").length;
   const nav: NavItem[] = [
     { key: "resumen", label: "Resumen", Icon: LayoutDashboard },
     { key: "validar", label: pend ? `Validar (${pend})` : "Validar", Icon: ClipboardCheck },

@@ -6,7 +6,7 @@ import { Check, X } from "lucide-react";
 
 export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const { db, refresh, flash } = ctx;
-  const kidOf = (id: string) => db.kids.find((k) => k.id === id);
+  const kidOf = (id: string | null) => db.kids.find((k) => k.id === id);
   const asg = db.assignments.filter((a) => a.status === "pending");
   const red = db.redemptions.filter((r) => r.status === "pending");
   const gif = db.gifts.filter((g) => g.status === "pending");

@@ -2,12 +2,12 @@
 import { useState } from "react";
 import { Card, Chip, Btn, IconTile, Modal } from "@/components/ui/atoms";
 import { COPY, pick } from "@/lib/copy";
-import { rpc } from "@/lib/helpers";
+import { rpc, todayStr } from "@/lib/helpers";
 import { notifyParents } from "@/lib/push";
 import { sb } from "@/lib/supabase";
-import { missionIcon } from "@/lib/icons";
+import { missionIcon, freqColor } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
-import { Check, Clock, CheckCircle2, Camera, Users } from "lucide-react";
+import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand } from "lucide-react";
 
 export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Assignment[] }) {
   const { db, flash, refresh, kid } = ctx;
@@ -16,6 +16,15 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
   const pending = asg.filter((a) => ["todo", "rejected"].includes(a.status));
   const wait = asg.filter((a) => a.status === "pending");
   const done = asg.filter((a) => a.status === "approved");
+  const today = todayStr();
+  const openAsg = db.assignments.filter((a) => !a.kid_id && a.status === "open" && a.due_date === today);
+  const colOf = (a: Assignment) => freqColor(db.tasks.find((t) => t.id === a.task_id)?.frequency || "");
+  const claim = async (a: Assignment) => {
+    setBusy(a.id);
+    const { error } = await rpc("claim_mission", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin });
+    setBusy(null);
+    if (error) flash(error.message); else { flash("¡Tuya! Ahora complétala."); refresh(); }
+  };
 
   const complete = async (a: Assignment, file?: File | null) => {
     setBusy(a.id);
@@ -37,14 +46,36 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
         <h3 className="font-bold text-navy tracking-tight">Misiones de hoy</h3>
         {me.can_tutor && <button onClick={() => setTutor(true)} className="text-sm font-semibold text-teal flex items-center gap-1"><Users size={15} /> Marcar por un hermano</button>}
       </div>
-      {pending.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">{pick(COPY.noTasks)}</Card>}
+      {openAsg.length > 0 && (
+        <div className="mb-1">
+          <div className="flex items-center gap-1.5 px-0.5 mb-2"><Sparkles size={14} className="text-blue-500" /><span className="text-xs font-bold uppercase tracking-wide text-blue-500">Disponibles · las coge quien quiera</span></div>
+          <div className="space-y-2.5">
+            {openAsg.map((a) => {
+              const Icon = missionIcon(a.title); const col = colOf(a); const loading = busy === a.id;
+              return (
+                <Card key={a.id} className="p-4" style={{ borderLeft: `4px solid ${col}` }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: col }}><Icon size={20} /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-navy truncate">{a.title}</div>
+                      <Chip tone="brand">+{a.points} pts</Chip>
+                    </div>
+                    <Btn variant="primary" className="text-sm py-2 flex items-center gap-1.5" disabled={loading} onClick={() => claim(a)}><Hand size={15} /> Hacer yo</Btn>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {pending.length === 0 && openAsg.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">{pick(COPY.noTasks)}</Card>}
       {pending.map((a) => {
         const Icon = missionIcon(a.title);
         const loading = busy === a.id;
         return (
           <Card key={a.id} className="p-4">
             <div className="flex items-center gap-3">
-              <IconTile color={me.color}><Icon size={20} /></IconTile>
+              <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: colOf(a) }}><Icon size={20} /></div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-navy truncate">{a.title}</div>
                 {a.status === "rejected"

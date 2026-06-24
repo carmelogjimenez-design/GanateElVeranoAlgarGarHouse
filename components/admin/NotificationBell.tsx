@@ -1,18 +1,20 @@
 "use client";
 import { useState } from "react";
-import { Bell, ClipboardCheck, Gift, ArrowLeftRight, BookOpen } from "lucide-react";
+import { Bell, ClipboardCheck, Gift, ArrowLeftRight, BookOpen, UserPlus } from "lucide-react";
 import type { Ctx } from "@/lib/types";
 
 export default function NotificationBell({ ctx, onGo }: { ctx: Ctx; onGo: (t: string) => void }) {
   const { db } = ctx;
   const [open, setOpen] = useState(false);
-  const name = (id: string) => db.kids.find((k) => k.id === id)?.name || "";
+  const name = (id: string | null) => db.kids.find((k) => k.id === id)?.name || "";
   const asg = db.assignments.filter((a) => a.status === "pending");
   const red = db.redemptions.filter((r) => r.status === "pending");
   const gif = db.gifts.filter((g) => g.status === "pending");
   const sr = db.study_rewards.filter((r) => r.status === "pending");
-  const total = asg.length + red.length + gif.length + sr.length;
+  const newKids = db.kids.filter((k) => k.user_id && k.status === "pending");
+  const total = asg.length + red.length + gif.length + sr.length + newKids.length;
   const items = [
+    ...newKids.map((k) => ({ Icon: UserPlus, text: `${k.name} se ha registrado · asígnale equipo` })),
     ...asg.map((a) => ({ Icon: ClipboardCheck, text: `${name(a.kid_id)} · ${a.title}` })),
     ...sr.map((r) => ({ Icon: BookOpen, text: `${name(r.kid_id)} pide su recompensa de estudio` })),
     ...red.map((r) => ({ Icon: Gift, text: `${name(r.kid_id)} quiere canjear: ${r.title}` })),
