@@ -19,10 +19,11 @@ export default function Lobby({ ctx, onKid, onLogin }: { ctx: Ctx; onKid: (k: Ki
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-brand/12 flex items-center justify-center"><Sun size={20} className="text-brand" /></div>
+            <img src="/logo.png" alt="Gánate el Verano" className="w-9 h-9 rounded-xl object-contain" />
             <span className="text-xs font-semibold text-slate-400 tracking-wide uppercase">Casa Algar · Verano 2026</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-navy">Gánate el Verano</h1>
+          <img src="/logo.png" alt="Gánate el Verano" className="h-28 md:h-36 w-auto object-contain mb-1" />
+          <h1 className="sr-only">Gánate el Verano</h1>
           <p className="text-slate-400 font-medium mt-1">{pick(COPY.lobbyTitles)}</p>
         </div>
         <Btn variant="dark" className="flex items-center justify-center gap-2 md:px-6" onClick={onLogin}><LogIn size={18} /> Entrar / Crear cuenta</Btn>

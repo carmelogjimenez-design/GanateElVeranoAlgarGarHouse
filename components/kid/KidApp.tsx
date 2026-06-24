@@ -60,7 +60,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
     <div className="min-h-screen pb-24">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2"><div className="w-9 h-9 rounded-xl bg-brand/12 flex items-center justify-center"><Sun size={20} className="text-brand" /></div></div>
+          <img src="/logo.png" alt="Gánate el Verano" className="w-10 h-10 rounded-xl object-contain shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="font-extrabold text-navy tracking-tight leading-none">¡Hola, {me.name}!</div>
             <div className="text-xs text-slate-400 hidden sm:block mt-0.5">Hoy es un gran día para sumar puntos</div>

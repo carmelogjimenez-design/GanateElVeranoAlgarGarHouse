@@ -5,7 +5,7 @@ import { sb } from "@/lib/supabase";
 import { rpc } from "@/lib/helpers";
 import { levelOf } from "@/lib/game";
 import type { Ctx, Kid } from "@/lib/types";
-import { UserPlus, FlagTriangleRight, Trash2, CheckCircle2 } from "lucide-react";
+import { UserPlus, FlagTriangleRight, Trash2, CheckCircle2, Plus, Minus, Coins } from "lucide-react";
 
 const SWATCHES = ["#FF8A00", "#19D3AE", "#3B82F6", "#A855F7", "#EC4899", "#22C55E", "#EAB308", "#EF4444", "#06B6D4", "#8B5CF6"];
 
@@ -22,7 +22,7 @@ function KidEditModal({ ctx, kid, onClose }: { ctx: Ctx; kid: Kid; onClose: () =
   const addSubj = async () => { await sb.from("subjects").insert({ kid_id: kid.id, ...subj }); refresh(); };
   return (
     <Modal title={`Editar ${kid.name}`} onClose={onClose}>
-      <div className="flex items-center gap-3 mb-3"><Avatar name={f.name} color={f.color} size={48} /><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
+      <div className="flex items-center gap-3 mb-3"><Avatar name={f.name} color={f.color} size={48} avatar={kid.avatar} /><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
       <label className="text-sm font-semibold text-navy">Color</label>
       <div className="flex flex-wrap gap-2 mt-1.5 mb-3">
         {SWATCHES.map((c) => <button key={c} onClick={() => setF({ ...f, color: c })} style={{ background: c }} className={`w-8 h-8 rounded-lg ${f.color === c ? "ring-2 ring-offset-2 ring-navy" : ""}`} />)}
@@ -85,12 +85,40 @@ function CompleteForModal({ ctx, kid, onClose }: { ctx: Ctx; kid: Kid; onClose: 
   );
 }
 
+function PointsModal({ ctx, kid, onClose }: { ctx: Ctx; kid: Kid; onClose: () => void }) {
+  const { refresh, flash } = ctx;
+  const [amount, setAmount] = useState(10);
+  const [reason, setReason] = useState("");
+  const apply = async (sign: 1 | -1) => {
+    const delta = sign * Math.abs(amount || 0);
+    if (!delta) return;
+    const { error } = await rpc("apply_points", { p_kid: kid.id, p_delta: delta, p_reason: reason });
+    if (error) flash(error.message);
+    else { flash(sign > 0 ? `+${Math.abs(delta)} pts otorgados a ${kid.name}` : `−${Math.abs(delta)} pts a ${kid.name}`); refresh(); onClose(); }
+  };
+  return (
+    <Modal title={`Puntos · ${kid.name}`} onClose={onClose}>
+      <p className="text-sm text-slate-400 font-medium mb-3">Otorga una recompensa extra o aplica una penalización manual. Queda registrado en el historial y en Analytics.</p>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div><label className="text-sm font-semibold text-navy">Cantidad (pts)</label><Input type="number" value={amount} onChange={(e) => setAmount(Math.abs(+e.target.value))} className="mt-1.5" /></div>
+        <div><label className="text-sm font-semibold text-navy">Motivo</label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="opcional" className="mt-1.5" /></div>
+      </div>
+      <div className="flex gap-2">
+        <Btn variant="teal" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => apply(1)}><Plus size={16} /> Otorgar</Btn>
+        <Btn variant="danger" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => apply(-1)}><Minus size={16} /> Penalizar</Btn>
+      </div>
+    </Modal>
+  );
+}
+
 export default function AdminKids({ ctx }: { ctx: Ctx }) {
   const { db, refresh, flash } = ctx;
   const [edit, setEdit] = useState<Kid | null>(null);
   const [complete, setComplete] = useState<Kid | null>(null);
+  const [points, setPoints] = useState<Kid | null>(null);
   const addTeam = async () => { const n = prompt("Nombre del equipo:"); if (n) { await sb.from("teams").insert({ name: n }); refresh(); } };
   const addKid = async () => { const n = prompt("Nombre del hijo:"); if (n) { await sb.from("kids").insert({ name: n, pin: "1111", color: SWATCHES[Math.floor(Math.random() * SWATCHES.length)] }); flash("Creado con PIN 1111"); refresh(); } };
+  const setTeam = async (kidId: string, teamId: string) => { await sb.from("kids").update({ team_id: teamId || null }).eq("id", kidId); flash("Equipo actualizado"); refresh(); };
   return (
     <div className="pb-6">
       <div className="flex gap-2 mb-4">
@@ -98,31 +126,35 @@ export default function AdminKids({ ctx }: { ctx: Ctx }) {
         <Btn variant="dark" className="flex-1 flex items-center justify-center gap-1.5" onClick={addTeam}><FlagTriangleRight size={17} /> Equipo</Btn>
       </div>
       <div className="space-y-2.5">
-        {db.kids.map((k) => {
-          const team = db.teams.find((t) => t.id === k.team_id);
-          return (
-            <Card key={k.id} className="p-3.5">
-              <div className="flex items-center gap-3">
-                <Avatar name={k.name} color={k.color} size={42} avatar={k.avatar} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-navy flex items-center gap-2">{k.name}{k.can_tutor && <Chip tone="teal">tutor</Chip>}{!k.app_access && <Chip tone="slate">sin móvil</Chip>}</div>
-                  <div className="text-xs text-slate-400">Nv {levelOf(k.total_points)} · {k.total_points} pts · {team?.name || "sin equipo"}</div>
-                </div>
-                <button onClick={() => setEdit(k)} className="text-brand font-semibold text-sm">Editar</button>
+        {db.kids.map((k) => (
+          <Card key={k.id} className="p-3.5">
+            <div className="flex items-center gap-3">
+              <Avatar name={k.name} color={k.color} size={42} avatar={k.avatar} />
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-navy flex items-center gap-2">{k.name}{k.can_tutor && <Chip tone="teal">tutor</Chip>}{!k.app_access && <Chip tone="slate">sin móvil</Chip>}</div>
+                <div className="text-xs text-slate-400">Nv {levelOf(k.total_points)} · {k.total_points} pts</div>
               </div>
-              <div className="flex items-center justify-between mt-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-navy">
-                  <input type="checkbox" checked={k.study_enabled} onChange={async (e) => { await sb.from("kids").update({ study_enabled: e.target.checked }).eq("id", k.id); refresh(); }} className="accent-teal w-4 h-4" />
-                  Estudio
-                </label>
-                <button onClick={() => setComplete(k)} className="text-sm font-semibold text-teal">Completar por…</button>
-              </div>
-            </Card>
-          );
-        })}
+              <button onClick={() => setEdit(k)} className="text-brand font-semibold text-sm">Editar</button>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <select value={k.team_id || ""} onChange={(e) => setTeam(k.id, e.target.value)} className="flex-1 border border-slate-200 bg-slate-50 rounded-xl px-3 py-2 text-sm font-medium text-navy">
+                <option value="">Sin equipo</option>{db.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+              <Btn variant="ghost" className="text-sm py-2 flex items-center gap-1.5" onClick={() => setPoints(k)}><Coins size={15} /> Puntos</Btn>
+            </div>
+            <div className="flex items-center justify-between mt-2.5">
+              <label className="flex items-center gap-2 text-sm font-medium text-navy">
+                <input type="checkbox" checked={k.study_enabled} onChange={async (e) => { await sb.from("kids").update({ study_enabled: e.target.checked }).eq("id", k.id); refresh(); }} className="accent-teal w-4 h-4" />
+                Estudio
+              </label>
+              <button onClick={() => setComplete(k)} className="text-sm font-semibold text-teal">Completar por…</button>
+            </div>
+          </Card>
+        ))}
       </div>
       {edit && <KidEditModal ctx={ctx} kid={edit} onClose={() => setEdit(null)} />}
       {complete && <CompleteForModal ctx={ctx} kid={complete} onClose={() => setComplete(null)} />}
+      {points && <PointsModal ctx={ctx} kid={points} onClose={() => setPoints(null)} />}
     </div>
   );
 }

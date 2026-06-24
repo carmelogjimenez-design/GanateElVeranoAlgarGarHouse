@@ -32,7 +32,7 @@ export default function AdminApp({ ctx }: { ctx: Ctx }) {
     { key: "ajustes", label: "Ajustes", Icon: Settings },
   ];
   return (
-    <AppShell variant="admin" title="Panel de padres" subtitle="Centro de mando" brand="P"
+    <AppShell variant="admin" title="Panel de padres" subtitle="Centro de mando" brand={<img src="/logo.png" alt="logo" className="w-full h-full object-contain rounded-xl" />}
       nav={nav} active={tab} onChange={setTab} onExit={logout}
       headerRight={<NotificationBell ctx={ctx} onGo={setTab} />}>
       {tab === "resumen" && <AdminResumen ctx={ctx} onGo={setTab} />}
