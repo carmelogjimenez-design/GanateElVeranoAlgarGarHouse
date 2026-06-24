@@ -86,8 +86,9 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
       </div>
 
       {/* CARTA FUT (toca para verla en grande) */}
-      <button onClick={openCard} className="w-full text-left active:scale-[.99] transition gev-floaty">
-        <PlayerCard kid={me} db={db} size="sm" />
+      <button onClick={openCard} className="block mx-auto active:scale-[.98] transition gev-floaty">
+        <PlayerCard kid={me} db={db} size="md" />
+        <div className="text-center text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-wide">Toca para ver tu carta</div>
       </button>
 
       {/* HERO GRID */}
