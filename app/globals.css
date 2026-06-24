@@ -24,3 +24,26 @@ body {
 .gev-glow { animation: glowpulse 2.6s ease-in-out infinite }
 @keyframes cardIn { 0% { transform: rotateY(90deg) scale(.7); opacity: 0 } 100% { transform: rotateY(0) scale(1); opacity: 1 } }
 .gev-card-in { animation: cardIn .6s cubic-bezier(.2,.8,.2,1.2) both }
+
+/* ===== KID SKIN · verano cálido vibrante ===== */
+@keyframes gevBgShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+@keyframes gevBlob { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(34px,-22px) scale(1.12)} 66%{transform:translate(-24px,22px) scale(.94)} }
+@keyframes gevRise { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes gevPopIn { 0%{transform:scale(.85);opacity:0} 70%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+@keyframes gevWiggle { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-4deg)} 75%{transform:rotate(4deg)} }
+@keyframes gevSheen { 0%{transform:translateX(-130%) skewX(-18deg)} 60%,100%{transform:translateX(260%) skewX(-18deg)} }
+.gev-rise{animation:gevRise .6s cubic-bezier(.2,.8,.2,1) both}
+.gev-pop{animation:gevPopIn .55s cubic-bezier(.2,.8,.3,1.35) both}
+.gev-wiggle:hover{animation:gevWiggle .5s ease}
+
+.kidskin .gev-card{
+  background:rgba(255,255,255,.62);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:26px;
+  box-shadow:0 16px 40px -18px rgba(255,107,94,.35), 0 2px 10px -5px rgba(13,31,58,.10);
+}
+.kid-bg{position:fixed;inset:0;z-index:0;background:linear-gradient(125deg,#FFEAD6 0%,#FFC9B8 32%,#FFD9E6 52%,#BFF3E8 74%,#FFE6C2 100%);background-size:240% 240%;animation:gevBgShift 20s ease infinite}
+.kid-blob{position:fixed;border-radius:50%;filter:blur(72px);z-index:0;opacity:.5;pointer-events:none}
+.gev-sheen{position:relative;overflow:hidden}
+.gev-sheen::after{content:"";position:absolute;top:0;bottom:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:gevSheen 3.4s ease-in-out infinite}

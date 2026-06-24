@@ -85,27 +85,31 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   return (
     <>
       {tut && <TutorialKid kidName={me.name} onClose={() => setTut(false)} />}
-    <div className="min-h-screen pb-24">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div className="kidskin min-h-screen pb-28 relative">
+      <div className="kid-bg" />
+      <span className="kid-blob" style={{ width: 360, height: 360, top: -100, right: -90, background: "#FF8A5B" }} />
+      <span className="kid-blob" style={{ width: 340, height: 340, bottom: -110, left: -100, background: "#19D3AE" }} />
+      <span className="kid-blob" style={{ width: 280, height: 280, top: "42%", left: "44%", background: "#FF7EB6", opacity: 0.32 }} />
+      <div className="relative z-10">
+      <header className="sticky top-0 z-20" style={{ background: "rgba(255,255,255,.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: "1px solid rgba(255,255,255,.6)" }}>
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
-          <img src="/logo.png" alt="Gánate el Verano" className="w-10 h-10 rounded-xl object-contain shrink-0" />
+          <img src="/logo.png" alt="Gánate el Verano" className="w-10 h-10 rounded-xl object-contain shrink-0 gev-wiggle" />
           <div className="flex-1 min-w-0">
-            <div className="font-extrabold text-navy tracking-tight leading-none">¡Hola, {me.name}!</div>
-            <div className="text-xs text-slate-400 hidden sm:block mt-0.5">Hoy es un gran día para sumar puntos</div>
+            <div className="font-black text-navy tracking-tight leading-none text-lg">¡Hola, {me.name}!</div>
+            <div className="text-xs text-navy/45 font-semibold hidden sm:block mt-0.5">Hoy es un gran día para sumar puntos</div>
           </div>
-          <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-amber-50">
-            <Star size={16} className="text-amber-400 fill-amber-400" />
-            <div className="font-extrabold text-navy text-sm">{me.total_points}</div>
-            <span className="text-[10px] font-semibold text-slate-400 hidden sm:block">PUNTOS</span>
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-full text-white shadow-lg" style={{ background: "linear-gradient(120deg,#FF6B5E,#FF9F45)", boxShadow: "0 8px 20px -6px rgba(255,107,94,.6)" }}>
+            <Star size={15} className="fill-white" />
+            <div className="font-black text-sm">{me.total_points}</div>
           </div>
-          <button onClick={toggleMute} title={muted ? "Activar sonido" : "Silenciar"} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+          <button onClick={toggleMute} title={muted ? "Activar sonido" : "Silenciar"} className="w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60 active:scale-90 transition">
             {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
           </button>
-          <button className="relative w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+          <button className="relative w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60">
             <Bell size={17} />{bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
           </button>
-          <button onClick={() => setAvatarOpen(true)} title="Cambiar avatar"><Avatar name={me.name} color={me.color} size={36} avatar={me.avatar} /></button>
-          <button onClick={exit} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500" title="Salir"><LogOut size={16} /></button>
+          <button onClick={() => setAvatarOpen(true)} title="Cambiar avatar" className="active:scale-90 transition"><Avatar name={me.name} color={me.color} size={36} avatar={me.avatar} /></button>
+          <button onClick={exit} className="w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60 active:scale-90 transition" title="Salir"><LogOut size={16} /></button>
         </div>
       </header>
 
@@ -119,11 +123,15 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
         {tab === "tienda" && <KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} />}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200">
-        <div className="max-w-2xl mx-auto flex">
+      <nav className="fixed bottom-3 inset-x-3 z-30 rounded-3xl" style={{ background: "rgba(255,255,255,.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,.8)", boxShadow: "0 14px 40px -12px rgba(255,107,94,.35)" }}>
+        <div className="max-w-2xl mx-auto flex p-1.5">
           {nav.map(([k, label, Icon]) => {
             const on = tab === k;
-            return <button key={k} onClick={() => setTab(k)} className="flex-1 flex flex-col items-center gap-0.5 py-2.5" style={{ color: on ? me.color : "#94A3B8" }}><Icon size={22} strokeWidth={on ? 2.4 : 2} /><span className="text-[10px] font-semibold">{label}</span></button>;
+            return (
+              <button key={k} onClick={() => { setTab(k); }} className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl transition active:scale-90" style={on ? { background: "linear-gradient(135deg,#FF6B5E,#FF9F45)", color: "#fff", boxShadow: "0 8px 18px -6px rgba(255,107,94,.6)" } : { color: "#0B1F3A99" }}>
+                <Icon size={21} strokeWidth={on ? 2.6 : 2} /><span className="text-[10px] font-bold">{label}</span>
+              </button>
+            );
           })}
         </div>
       </nav>
@@ -152,6 +160,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
       )}
 
       {celeb && <Celebration icon={celeb.icon} title={celeb.title} subtitle={celeb.subtitle} color={celeb.color} onClose={() => setCeleb(null)} />}
+      </div>
     </div>
     </>
   );

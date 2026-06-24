@@ -6,7 +6,7 @@ import { avatarIcon } from "@/lib/icons";
 /* ---------- Card ---------- */
 export const Card = ({ children, className = "", onClick, style }:
   { children: React.ReactNode; className?: string; onClick?: () => void; style?: React.CSSProperties }) => (
-  <div onClick={onClick} style={style} className={`bg-white border border-slate-200 rounded-2xl shadow-card ${onClick ? "cursor-pointer active:scale-[.99] transition" : ""} ${className}`}>{children}</div>
+  <div onClick={onClick} style={style} className={`gev-card bg-white border border-slate-200 rounded-2xl shadow-card ${onClick ? "cursor-pointer active:scale-[.99] transition" : ""} ${className}`}>{children}</div>
 );
 
 /* ---------- Button ---------- */

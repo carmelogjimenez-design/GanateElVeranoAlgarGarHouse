@@ -13,6 +13,7 @@ import { kidVibe } from "@/lib/vibes";
 import { sfx } from "@/lib/sfx";
 import { confetti } from "@/lib/confetti";
 import PlayerCard from "@/components/PlayerCard";
+import CarnetCard from "@/components/CarnetCard";
 import ActivityWall from "@/components/ActivityWall";
 import type { Ctx, Kid } from "@/lib/types";
 import {
@@ -74,39 +75,38 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
   const weekdayName = ["L", "M", "X", "J", "V", "S", "D"][(new Date().getDay() + 6) % 7];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* MENSAJE DE BIENVENIDA */}
-      <div className="rounded-3xl p-5 text-white relative overflow-hidden" style={{ background: isWeekKid ? "linear-gradient(120deg,#EAB308,#FF8A00)" : "linear-gradient(120deg,#0B1F3A,#13315c)" }}>
-        <div className="absolute -top-10 -right-8 w-40 h-40 rounded-full blur-2xl opacity-30" style={{ background: isWeekKid ? "#fff" : "#19D3AE" }} />
+      <div className="gev-rise relative overflow-hidden rounded-3xl p-5 text-white" style={{ background: isWeekKid ? "linear-gradient(120deg,#F6B23A,#FF6B5E)" : "linear-gradient(120deg,#FF6B5E,#FF9F45 55%,#FF7EB6)", boxShadow: "0 16px 40px -16px rgba(255,107,94,.6)" }}>
+        <span className="absolute -top-10 -right-8 w-40 h-40 rounded-full blur-2xl" style={{ background: "rgba(255,255,255,.4)" }} />
         <div className="relative flex items-center gap-3">
-          {isWeekKid && <div className="text-4xl">👑</div>}
+          {isWeekKid && <div className="text-4xl gev-wiggle">👑</div>}
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wider opacity-70">{isWeekKid ? "Hijo de la semana" : `Hola, ${me.name}`}</div>
-            <div className="font-extrabold text-lg leading-snug mt-0.5">{vibe}</div>
+            <div className="text-[11px] font-black uppercase tracking-wider opacity-85">{isWeekKid ? "Hijo de la semana" : `Hola, ${me.name}`}</div>
+            <div className="font-black text-xl leading-snug mt-0.5">{vibe}</div>
           </div>
         </div>
       </div>
 
+      {/* CARNET */}
+      <div className="gev-rise" style={{ animationDelay: ".05s" }}>
+        <CarnetCard kid={me} db={db} onClick={openCard} />
+        <div className="text-center text-[10px] font-bold text-navy/35 mt-1.5 uppercase tracking-wider">Toca tu carnet para ver tu carta</div>
+      </div>
+
       {/* HERO GRID */}
       <div className="grid gap-4 md:grid-cols-3 items-start">
-        {/* Carta + stats (columna izquierda del hero) */}
-        <div className="space-y-3">
-          <button onClick={openCard} className="block w-full active:scale-[.98] transition gev-floaty">
-            <PlayerCard kid={me} db={db} size="sm" />
-            <div className="text-center text-[11px] font-bold text-slate-400 mt-2 uppercase tracking-wide">Toca para ver tu carta</div>
-          </button>
-          <Card className="bg-navy border-navy text-white p-4">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div><div className="flex items-center justify-center gap-1 text-brand"><Flame size={14} /><span className="font-bold">{streak}</span></div><div className="text-[10px] opacity-50 mt-0.5">RACHA</div></div>
-              <div><div className="flex items-center justify-center gap-1 text-teal"><Clock size={14} /><span className="font-bold">{studyH}h</span></div><div className="text-[10px] opacity-50 mt-0.5">ESTUDIO</div></div>
-              <div><div className="flex items-center justify-center gap-1"><Trophy size={14} className="text-yellow-400" /><span className="font-bold">#{rank}</span></div><div className="text-[10px] opacity-50 mt-0.5">RANKING</div></div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-white/10">
-              <div className="flex justify-between text-xs mb-1.5"><span className="opacity-60 font-medium">Nivel {lvl}</span><span className="font-bold">{Math.round(levelProgress(me.total_points) * 100)}% → Nv {lvl + 1}</span></div>
-              <Bar v={me.total_points % 100} max={100} c={me.color} />
-            </div>
-          </Card>
-        </div>
+        <Card className="p-4 gev-rise" style={{ animationDelay: ".1s" }}>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div><div className="flex items-center justify-center gap-1 text-brand"><Flame size={15} /><span className="font-black text-navy">{streak}</span></div><div className="text-[10px] font-bold text-navy/40 mt-0.5">RACHA</div></div>
+            <div><div className="flex items-center justify-center gap-1 text-teal"><Clock size={15} /><span className="font-black text-navy">{studyH}h</span></div><div className="text-[10px] font-bold text-navy/40 mt-0.5">ESTUDIO</div></div>
+            <div><div className="flex items-center justify-center gap-1"><Trophy size={15} className="text-amber-400" /><span className="font-black text-navy">#{rank}</span></div><div className="text-[10px] font-bold text-navy/40 mt-0.5">RANKING</div></div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-navy/10">
+            <div className="flex justify-between text-xs mb-1.5"><span className="text-navy/50 font-semibold">Nivel {lvl}</span><span className="font-black text-navy">{Math.round(levelProgress(me.total_points) * 100)}% → Nv {lvl + 1}</span></div>
+            <Bar v={me.total_points % 100} max={100} c="#FF6B5E" />
+          </div>
+        </Card>
 
         {/* Tu equipo */}
         <Card className="text-white p-5 border-0" style={{ background: team?.color || "#19D3AE" }}>
