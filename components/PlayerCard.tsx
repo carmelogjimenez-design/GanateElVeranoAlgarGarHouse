@@ -1,6 +1,6 @@
 "use client";
-import { Avatar } from "@/components/ui/atoms";
-import { levelOf, playerStats, rarityOf } from "@/lib/game";
+import { levelOf, playerStats, rarityOf, initials } from "@/lib/game";
+import { avatarIcon } from "@/lib/icons";
 import type { DB, Kid } from "@/lib/types";
 import { Dumbbell, Brain, Flame } from "lucide-react";
 
@@ -18,7 +18,9 @@ export default function PlayerCard({ kid, db, size = "md" }: { kid: Kid; db: DB;
   const lvl = levelOf(kid.total_points);
   const team = db.teams.find((t) => t.id === kid.team_id);
   const big = size === "lg";
-  const av = big ? 104 : size === "md" ? 90 : 84;
+  const av = big ? 116 : size === "md" ? 104 : 96;
+  const photo = kid.avatar && kid.avatar.startsWith("http") ? kid.avatar : null;
+  const Ic = !photo && kid.avatar ? avatarIcon(kid.avatar) : null;
 
   const stat = (Icon: typeof Flame, label: string, val: number) => (
     <div className="flex items-center gap-2.5">
@@ -48,11 +50,22 @@ export default function PlayerCard({ kid, db, size = "md" }: { kid: Kid; db: DB;
           <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full" style={{ background: "rgba(0,0,0,.22)", color: f.text, boxShadow: `inset 0 0 0 1px ${f.ring}55` }}>{r.label}</span>
         </div>
 
-        {/* avatar con aro */}
-        <div className="flex justify-center mt-1 mb-3">
-          <div className="rounded-full p-[3px]" style={{ background: `conic-gradient(${f.ring},#ffffffaa,${f.ring})`, boxShadow: `0 0 24px ${f.ring}aa` }}>
-            <div className="rounded-full p-1" style={{ background: f.base }}>
-              <Avatar name={kid.name} color={kid.color} size={av} avatar={kid.avatar} />
+        {/* medallón circular integrado */}
+        <div className="flex justify-center mt-2 mb-3">
+          <div className="rounded-full p-[3px]" style={{ background: `linear-gradient(150deg, #ffffff, ${f.ring}, ${f.ring}99)`, boxShadow: `0 10px 26px ${f.ring}55, inset 0 0 0 1px rgba(255,255,255,.4)` }}>
+            <div className="rounded-full p-[3px]" style={{ background: f.base }}>
+              <div className="relative rounded-full overflow-hidden flex items-center justify-center" style={{ width: av, height: av, background: "radial-gradient(circle at 50% 30%, rgba(255,255,255,.20), rgba(0,0,0,.34))" }}>
+                {photo ? (
+                  <img src={photo} alt={kid.name} className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle at 50% 42%, ${kid.color}, transparent 62%)`, opacity: 0.5 }} />
+                    {Ic ? <Ic size={Math.round(av * 0.46)} strokeWidth={2} className="relative" style={{ color: "#fff" }} />
+                        : <span className="relative font-black text-white" style={{ fontSize: Math.round(av * 0.42), textShadow: "0 2px 8px rgba(0,0,0,.35)" }}>{initials(kid.name)}</span>}
+                  </>
+                )}
+                <div className="absolute inset-0 rounded-full" style={{ boxShadow: "inset 0 2px 10px rgba(255,255,255,.25), inset 0 -8px 18px rgba(0,0,0,.25)" }} />
+              </div>
             </div>
           </div>
         </div>
