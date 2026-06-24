@@ -12,6 +12,7 @@ import KidMarket from "@/components/kid/KidMarket";
 import KidStudy from "@/components/kid/KidStudy";
 import RankingList from "@/components/RankingList";
 import Celebration from "@/components/Celebration";
+import Footer from "@/components/Footer";
 import TutorialKid from "@/components/kid/TutorialKid";
 import type { Ctx } from "@/lib/types";
 import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap, Volume2, VolumeX } from "lucide-react";
@@ -122,6 +123,8 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
         {tab === "ranking" && <div className="max-w-2xl"><RankingList db={db} highlight={me.id} /></div>}
         {tab === "tienda" && <KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} />}
       </main>
+
+      <Footer />
 
       <nav className="fixed bottom-3 inset-x-3 z-30 rounded-3xl" style={{ background: "rgba(255,255,255,.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,.8)", boxShadow: "0 14px 40px -12px rgba(255,107,94,.35)" }}>
         <div className="max-w-2xl mx-auto flex p-1.5">

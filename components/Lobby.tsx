@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/atoms";
+import Footer from "@/components/Footer";
 import { DAD_TAGLINES } from "@/lib/vibes";
 import type { Ctx, Kid } from "@/lib/types";
 import { Trophy, Flag, LogIn, Users, Sparkles, ChevronRight } from "lucide-react";
@@ -150,6 +151,7 @@ export default function Lobby({ ctx, onKid, onLogin }: { ctx: Ctx; onKid: (k: Ki
           ))}
         </div>
       </div>
+      <Footer dark />
     </div>
   );
 }

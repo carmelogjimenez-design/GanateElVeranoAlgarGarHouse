@@ -12,14 +12,16 @@ const SWATCHES = ["#FF8A00", "#19D3AE", "#3B82F6", "#A855F7", "#EC4899", "#22C55
 function KidEditModal({ ctx, kid, onClose }: { ctx: Ctx; kid: Kid; onClose: () => void }) {
   const { db, refresh, flash } = ctx;
   const [f, setF] = useState({ name: kid.name, pin: "", color: kid.color, team_id: kid.team_id || "", weekly_goal: kid.weekly_goal, can_tutor: kid.can_tutor, app_access: kid.app_access });
-  const [subj, setSubj] = useState({ name: "Matemáticas", level: "ESO" });
+  const [subj, setSubj] = useState({ name: "Matemáticas", level: "1º ESO" });
   const mySubj = db.subjects.filter((s) => s.kid_id === kid.id);
   const save = async () => {
     const patch: Record<string, unknown> = { name: f.name, color: f.color, team_id: f.team_id || null, weekly_goal: f.weekly_goal, can_tutor: f.can_tutor, app_access: f.app_access };
     if (f.pin && f.pin.length === 4) patch.pin = f.pin;
     await sb.from("kids").update(patch).eq("id", kid.id); flash("Guardado"); refresh(); onClose();
   };
-  const addSubj = async () => { await sb.from("subjects").insert({ kid_id: kid.id, ...subj }); refresh(); };
+  const [studyOn, setStudyOn] = useState(kid.study_enabled);
+  const toggleStudy = async (v: boolean) => { setStudyOn(v); await sb.from("kids").update({ study_enabled: v }).eq("id", kid.id); refresh(); };
+  const addSubj = async () => { if (!subj.name.trim()) return; await sb.from("subjects").insert({ kid_id: kid.id, ...subj }); refresh(); };
   return (
     <Modal title={`Editar ${kid.name}`} onClose={onClose}>
       <div className="flex items-center gap-3 mb-3"><Avatar name={f.name} color={f.color} size={48} avatar={kid.avatar} /><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
@@ -38,14 +40,13 @@ function KidEditModal({ ctx, kid, onClose }: { ctx: Ctx; kid: Kid; onClose: () =
       <div className="space-y-2 mb-4">
         <label className="flex items-center gap-2 text-sm font-medium text-navy"><input type="checkbox" checked={f.can_tutor} onChange={(e) => setF({ ...f, can_tutor: e.target.checked })} className="accent-teal w-4 h-4" /> Hermano tutor (puede marcar misiones de otros)</label>
         <label className="flex items-center gap-2 text-sm font-medium text-navy"><input type="checkbox" checked={f.app_access} onChange={(e) => setF({ ...f, app_access: e.target.checked })} className="accent-teal w-4 h-4" /> Tiene acceso a la app (móvil propio)</label>
+        <label className="flex items-center gap-2 text-sm font-medium text-navy"><input type="checkbox" checked={studyOn} onChange={(e) => toggleStudy(e.target.checked)} className="accent-teal w-4 h-4" /> Estudios activados (pestaña Estudio + temario)</label>
       </div>
-      <Btn variant="primary" className="w-full" onClick={save}>Guardar</Btn>
-      <button onClick={async () => { if (confirm(`¿Eliminar a ${kid.name}? Se borrarán sus misiones y puntos. Esta acción no se puede deshacer.`)) { await sb.from("kids").delete().eq("id", kid.id); flash("Hijo eliminado"); refresh(); onClose(); } }}
-        className="w-full mt-2 text-sm font-semibold text-red-400 hover:text-red-500 py-2">Eliminar hijo</button>
-
-      {kid.study_enabled && (
-        <div className="mt-5 border-t border-slate-100 pt-4">
-          <h4 className="font-bold text-navy mb-2">Asignaturas</h4>
+      {studyOn && (
+        <div className="mb-4 border-t border-slate-100 pt-4">
+          <h4 className="font-bold text-navy mb-1">Asignaturas (estudios)</h4>
+          <p className="text-xs text-slate-400 mb-2">Cada asignatura con su nivel define el temario y los tests que verá {f.name}.</p>
+          {mySubj.length === 0 && <p className="text-sm text-slate-400 py-1">Aún no tiene asignaturas. Añade la primera abajo 👇</p>}
           {mySubj.map((s) => (
             <div key={s.id} className="flex justify-between items-center text-sm py-1.5">
               <span className="font-medium text-navy">{s.name} · <span className="text-slate-400">{s.level}</span></span>
@@ -61,6 +62,9 @@ function KidEditModal({ ctx, kid, onClose }: { ctx: Ctx; kid: Kid; onClose: () =
           </div>
         </div>
       )}
+      <Btn variant="primary" className="w-full" onClick={save}>Guardar</Btn>
+      <button onClick={async () => { if (confirm(`¿Eliminar a ${kid.name}? Se borrarán sus misiones y puntos. Esta acción no se puede deshacer.`)) { await sb.from("kids").delete().eq("id", kid.id); flash("Hijo eliminado"); refresh(); onClose(); } }}
+        className="w-full mt-2 text-sm font-semibold text-red-400 hover:text-red-500 py-2">Eliminar hijo</button>
     </Modal>
   );
 }

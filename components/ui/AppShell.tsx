@@ -2,6 +2,7 @@
 import React from "react";
 import type { LucideIcon } from "lucide-react";
 import { LogOut } from "lucide-react";
+import Footer from "@/components/Footer";
 
 export type NavItem = { key: string; label: string; Icon: LucideIcon };
 
@@ -65,7 +66,7 @@ export function AppShell({
 
         {headerRight && <div className="hidden md:flex justify-end items-center px-8 pt-5 text-navy">{headerRight}</div>}
 
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 py-5 pb-28 md:pb-10">{children}</main>
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 py-5 pb-28 md:pb-10">{children}<Footer /></main>
 
         {/* bottom nav — solo móvil */}
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200 flex">
