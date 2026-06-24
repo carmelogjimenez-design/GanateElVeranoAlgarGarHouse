@@ -56,7 +56,7 @@ export default function Lobby({ ctx, onKid, onLogin }: { ctx: Ctx; onKid: (k: Ki
         ))}
       </div>
 
-      <Btn c="bg-slate-800" className="w-full" onClick={onLogin}>👑 Soy Tamar / Ricardo</Btn>
+      <Btn c="bg-slate-800" className="w-full" onClick={onLogin}>🔑 Entrar / Crear cuenta</Btn>
     </div>
   );
 }
