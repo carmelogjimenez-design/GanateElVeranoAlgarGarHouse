@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, Btn, Chip, Bar, Modal, IconTile } from "@/components/ui/atoms";
 import { rpc, fmtMin, todayStr } from "@/lib/helpers";
 import { studyTodaySeconds } from "@/lib/game";
-import { getStudyContent } from "@/lib/study";
+import { getStudyContent, getQuizQuestions, type QQ } from "@/lib/study";
 import { notifyParents } from "@/lib/push";
 import type { Ctx, Kid, Subject } from "@/lib/types";
-import { Play, Square, BookOpen, ListChecks, FileQuestion, Trophy, Clock, CheckCircle2, Sparkles } from "lucide-react";
+import { Play, Square, BookOpen, ListChecks, FileQuestion, Trophy, Clock, CheckCircle2, Sparkles, AlertTriangle } from "lucide-react";
 
 export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const { db, flash, refresh, kid } = ctx;
@@ -21,6 +21,9 @@ export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const [temario, setTemario] = useState<Subject | null>(null);
   const [test, setTest] = useState<Subject | null>(null);
 
+  const seenFor = (sid: string) => new Set(db.study_questions_seen.filter((s) => s.kid_id === me.id && s.subject_id === sid).map((s) => s.q_sig));
+  const testsToday = (sid: string) => db.test_sessions.filter((t) => t.kid_id === me.id && t.subject_id === sid && t.day === todayStr()).length;
+
   const claim = async () => {
     const { error } = await rpc("claim_study_reward", { p_kid: me.id, p_pin: kid!.pin, p_day: todayStr() });
     if (!error) notifyParents("Gánate el Verano", `${me.name} pide su recompensa de estudio`);
@@ -29,7 +32,6 @@ export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
 
   return (
     <div className="space-y-3 pb-6">
-      {/* Progreso diario */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-1">
           <h3 className="font-bold text-navy tracking-tight">Tu hora de estudio de hoy</h3>
@@ -39,7 +41,7 @@ export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
           <span className="text-3xl font-extrabold text-navy tabular-nums">{Math.floor(todaySec / 60)}</span>
           <span className="text-slate-400 font-semibold mb-1">/ {Math.round(goal / 60)} min</span>
         </div>
-        <Bar v={todaySec} max={goal} />
+        <Bar v={todaySec} max={goal} c="#19D3AE" />
         <div className="mt-4">
           {todayReward ? (
             todayReward.status === "pending" ? <Chip tone="amber">Recompensa pendiente de aprobación</Chip>
@@ -51,42 +53,45 @@ export default function KidStudy({ ctx, me }: { ctx: Ctx; me: Kid }) {
             <p className="text-sm text-slate-400 font-medium">Estudia {Math.ceil((goal - todaySec) / 60)} min más para desbloquear tu recompensa de hoy.</p>
           )}
         </div>
+        <p className="text-[11px] text-slate-300 font-medium mt-3">El estudio real suma minuto a minuto. Cada test cuenta como máx. 5 min (3 por asignatura/día).</p>
       </Card>
 
       <h3 className="font-bold text-navy tracking-tight px-0.5 pt-1">Asignaturas</h3>
       {mine.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">Sin asignaturas todavía. Pídeselas a tus padres.</Card>}
-      {mine.map((s) => (
-        <Card key={s.id} className="p-4">
-          <div className="flex items-center gap-3">
-            <IconTile color="#19D3AE"><BookOpen size={20} /></IconTile>
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-navy truncate">{s.name}</div>
-              <div className="text-xs text-slate-400 mt-0.5">Total {fmtMin(s.total_seconds)}</div>
+      {mine.map((s) => {
+        const left = 3 - testsToday(s.id);
+        return (
+          <Card key={s.id} className="p-4">
+            <div className="flex items-center gap-3">
+              <IconTile color="#19D3AE"><BookOpen size={20} /></IconTile>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-navy truncate">{s.name}</div>
+                <div className="text-xs text-slate-400 mt-0.5">Total {fmtMin(s.total_seconds)} · Tests hoy {3 - left}/3</div>
+              </div>
+              <Chip tone="teal">{s.level}</Chip>
             </div>
-            <Chip tone="teal">{s.level}</Chip>
-          </div>
-          <div className="flex gap-2 mt-3">
-            <Btn variant="teal" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setStudy(s)}><Play size={15} /> Estudiar</Btn>
-            <Btn variant="ghost" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setTemario(s)}><ListChecks size={15} /> Temario</Btn>
-            <Btn variant="dark" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setTest(s)}><FileQuestion size={15} /> Test</Btn>
-          </div>
-        </Card>
-      ))}
+            <div className="flex gap-2 mt-3">
+              <Btn variant="teal" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setStudy(s)}><Play size={15} /> Estudiar</Btn>
+              <Btn variant="ghost" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setTemario(s)}><ListChecks size={15} /> Temario</Btn>
+              <Btn variant="dark" disabled={left <= 0} className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setTest(s)}><FileQuestion size={15} /> {left <= 0 ? "Hecho hoy" : "Test"}</Btn>
+            </div>
+          </Card>
+        );
+      })}
 
       {study && <ConcentrationModal ctx={ctx} me={me} subject={study} onClose={() => setStudy(null)} />}
       {temario && <TemarioModal subject={temario} onClose={() => setTemario(null)} />}
-      {test && <TestModal ctx={ctx} me={me} subject={test} onClose={() => setTest(null)} />}
+      {test && <TestModal ctx={ctx} me={me} subject={test} seen={seenFor(test.id)} onClose={() => setTest(null)} />}
     </div>
   );
 }
 
-/* ---------- Modo concentración (estilo Forest) ---------- */
 function ConcentrationModal({ ctx, me, subject, onClose }: { ctx: Ctx; me: Kid; subject: Subject; onClose: () => void }) {
   const { flash, refresh, kid } = ctx;
   const [sec, setSec] = useState(0);
   const [saving, setSaving] = useState(false);
   useEffect(() => { const t = setInterval(() => setSec((x) => x + 1), 1000); return () => clearInterval(t); }, []);
-  const growth = Math.min(1, sec / 1500); // 25 min = árbol completo
+  const growth = Math.min(1, sec / 1500);
   const finish = async () => {
     setSaving(true);
     await rpc("log_study", { p_kid: me.id, p_pin: kid!.pin, p_subject: subject.id, p_seconds: sec });
@@ -96,7 +101,7 @@ function ConcentrationModal({ ctx, me, subject, onClose }: { ctx: Ctx; me: Kid; 
   return (
     <Modal title={`Concentración · ${subject.name}`} onClose={onClose}>
       <div className="text-center py-4">
-        <div className="mx-auto w-32 h-32 rounded-full flex items-center justify-center mb-4" style={{ background: `radial-gradient(circle, rgba(25,211,174,0.18) 0%, rgba(25,211,174,0.04) 70%)` }}>
+        <div className="mx-auto w-32 h-32 rounded-full flex items-center justify-center mb-4" style={{ background: "radial-gradient(circle, rgba(25,211,174,0.18) 0%, rgba(25,211,174,0.04) 70%)" }}>
           <Sparkles size={40 + growth * 36} className="text-teal transition-all duration-1000" style={{ opacity: 0.4 + growth * 0.6 }} />
         </div>
         <div className="text-5xl font-extrabold tabular-nums text-navy">{String(Math.floor(sec / 60)).padStart(2, "0")}:{String(sec % 60).padStart(2, "0")}</div>
@@ -107,7 +112,6 @@ function ConcentrationModal({ ctx, me, subject, onClose }: { ctx: Ctx; me: Kid; 
   );
 }
 
-/* ---------- Temario por nivel ---------- */
 function TemarioModal({ subject, onClose }: { subject: Subject; onClose: () => void }) {
   const content = getStudyContent(subject.name, subject.level);
   return (
@@ -125,33 +129,55 @@ function TemarioModal({ subject, onClose }: { subject: Subject; onClose: () => v
   );
 }
 
-/* ---------- Test (suma 5 min de estudio al terminar) ---------- */
-function TestModal({ ctx, me, subject, onClose }: { ctx: Ctx; me: Kid; subject: Subject; onClose: () => void }) {
+function TestModal({ ctx, me, subject, seen, onClose }: { ctx: Ctx; me: Kid; subject: Subject; seen: Set<string>; onClose: () => void }) {
   const { flash, refresh, kid } = ctx;
-  const content = getStudyContent(subject.name, subject.level);
+  const [questions] = useState<QQ[]>(() => getQuizQuestions(subject.name, subject.level, seen, 5));
+  const start = useRef(Date.now());
+  const log = useRef<{ sig: string; correct: boolean }[]>([]);
   const [i, setI] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [done, setDone] = useState(false);
-  const q = content.quiz[i];
+  const [result, setResult] = useState<{ awarded: number; suspicious: boolean } | null>(null);
+  const q = questions[i];
 
-  const choose = (opt: number) => { if (picked !== null) return; setPicked(opt); if (opt === q.answer) setScore((s) => s + 1); };
+  const choose = (opt: number) => {
+    if (picked !== null) return;
+    setPicked(opt);
+    const ok = opt === q.answer;
+    if (ok) setScore((s) => s + 1);
+    log.current.push({ sig: q.sig, correct: ok });
+  };
   const next = async () => {
-    if (i + 1 < content.quiz.length) { setI(i + 1); setPicked(null); return; }
-    setDone(true);
-    await rpc("log_study", { p_kid: me.id, p_pin: kid!.pin, p_subject: subject.id, p_seconds: 300 });
-    refresh();
+    if (i + 1 < questions.length) { setI(i + 1); setPicked(null); return; }
+    const elapsed = Math.round((Date.now() - start.current) / 1000);
+    const { data, error } = await rpc("finish_test", {
+      p_kid: me.id, p_pin: kid!.pin, p_subject: subject.id,
+      p_score: score, p_total: questions.length, p_elapsed: elapsed,
+      p_sigs: log.current.map((l) => l.sig), p_correct: log.current.map((l) => l.correct),
+    });
+    if (error) { flash(error.message); onClose(); return; }
+    const r = (data || {}) as { awarded?: number; suspicious?: boolean };
+    setResult({ awarded: r.awarded ?? 300, suspicious: !!r.suspicious });
+    if (!r.suspicious) notifyParents("Gánate el Verano", `${me.name} ha hecho un test de ${subject.name}`);
+    setDone(true); refresh();
   };
 
-  if (done) {
-    const total = content.quiz.length;
+  if (done && result) {
+    const total = questions.length;
     return (
       <Modal title="Resultado del test" onClose={onClose}>
         <div className="text-center py-4">
           <div className="w-20 h-20 rounded-3xl bg-teal/12 text-teal mx-auto flex items-center justify-center mb-3"><CheckCircle2 size={40} /></div>
           <div className="text-3xl font-extrabold text-navy">{score} / {total}</div>
           <p className="text-slate-500 font-medium mt-1">{score === total ? "¡Perfecto! Crack." : score >= total / 2 ? "¡Bien! Sigue repasando." : "A repasar el temario y vuelve a intentarlo."}</p>
-          <p className="text-xs text-teal font-semibold mt-3">+5 min de estudio sumados a tu hora de hoy</p>
+          <p className="text-xs text-teal font-semibold mt-3">+{Math.round(result.awarded / 60)} min de estudio sumados</p>
+          {result.suspicious && (
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 flex items-start gap-2 text-left">
+              <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+              <span className="text-xs font-medium text-amber-700">Has respondido muy rápido. El estudio real cuenta más que los tests: la recompensa de este test es menor y tus padres lo revisarán.</span>
+            </div>
+          )}
           <Btn variant="primary" className="w-full mt-5" onClick={onClose}>Hecho</Btn>
         </div>
       </Modal>
@@ -160,21 +186,20 @@ function TestModal({ ctx, me, subject, onClose }: { ctx: Ctx; me: Kid; subject: 
 
   return (
     <Modal title={`Test · ${subject.name}`} onClose={onClose}>
-      <div className="text-xs font-semibold text-slate-400 mb-1">Pregunta {i + 1} de {content.quiz.length}</div>
-      <Bar v={i} max={content.quiz.length} />
+      <div className="text-xs font-semibold text-slate-400 mb-1">Pregunta {i + 1} de {questions.length}</div>
+      <Bar v={i} max={questions.length} c="#19D3AE" />
       <h4 className="font-bold text-navy text-lg mt-4 mb-3">{q.q}</h4>
       <div className="space-y-2">
         {q.options.map((opt, idx) => {
-          const isAns = idx === q.answer;
           const show = picked !== null;
           const cls = show
-            ? isAns ? "border-teal bg-teal/10 text-navy"
+            ? idx === q.answer ? "border-teal bg-teal/10 text-navy"
               : idx === picked ? "border-red-300 bg-red-50 text-red-500" : "border-slate-200 text-slate-400"
             : "border-slate-200 hover:border-brand text-navy";
           return <button key={idx} onClick={() => choose(idx)} className={`w-full text-left rounded-xl border px-4 py-3 font-medium text-sm transition ${cls}`}>{opt}</button>;
         })}
       </div>
-      {picked !== null && <Btn variant="primary" className="w-full mt-4" onClick={next}>{i + 1 < content.quiz.length ? "Siguiente" : "Ver resultado"}</Btn>}
+      {picked !== null && <Btn variant="primary" className="w-full mt-4" onClick={next}>{i + 1 < questions.length ? "Siguiente" : "Ver resultado"}</Btn>}
     </Modal>
   );
 }

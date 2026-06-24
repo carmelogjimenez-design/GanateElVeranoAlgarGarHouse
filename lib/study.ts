@@ -202,3 +202,77 @@ export function getStudyContent(name: string, level: string): StudyContent {
   const b = detectBand(level);
   return BANK[g][b] || BANK[g].eso || BANK.general.eso!;
 }
+
+// =====================================================================
+// MOTOR DE PREGUNTAS: infinitas (mates, procedurales) + banco sin repetir
+// Cada pregunta lleva una firma (sig) para no repetirse por alumno.
+// =====================================================================
+export type QQ = { q: string; options: string[]; answer: number; sig: string };
+
+export function sig(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h) + s.charCodeAt(i);
+  return "q" + (h >>> 0).toString(36);
+}
+
+const rnd = (a: number, b: number) => Math.floor(Math.random() * (b - a + 1)) + a;
+const shuffle = <T,>(arr: T[]) => { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+
+function build(q: string, answer: number | string, distractors: (number | string)[]): QQ {
+  const set = [String(answer), ...distractors.map(String)];
+  const uniq: string[] = [];
+  for (const o of set) if (!uniq.includes(o)) uniq.push(o);
+  let guard = 0;
+  while (uniq.length < 4 && guard++ < 50) { const c = String(rnd(0, 99)); if (!uniq.includes(c)) uniq.push(c); }
+  const four = uniq.slice(0, 4);
+  if (!four.includes(String(answer))) four[3] = String(answer);
+  shuffle(four);
+  return { q, options: four, answer: four.indexOf(String(answer)), sig: sig("m|" + q) };
+}
+
+// Generador procedural de matemáticas (infinito y siempre nuevo)
+function mathGen(band: Band): QQ {
+  if (band === "primaria") {
+    switch (rnd(1, 5)) {
+      case 1: { const a = rnd(2, 9), b = rnd(2, 9); return build(`${a} × ${b} = ?`, a * b, [a * b + b, a * b - a, a * (b + 1)]); }
+      case 2: { const a = rnd(15, 89), b = rnd(10, 60); return build(`${a} + ${b} = ?`, a + b, [a + b + 10, a + b - 1, a + b + 9]); }
+      case 3: { const a = rnd(40, 99), b = rnd(10, 39); return build(`${a} − ${b} = ?`, a - b, [a - b + 10, a - b - 10, a - b + 1]); }
+      case 4: { const n = rnd(2, 24) * 2; return build(`¿Cuánto es la mitad de ${n}?`, n / 2, [n / 2 + 1, n / 2 - 1, n]); }
+      default: { const h = rnd(1, 5); return build(`¿Cuántos minutos hay en ${h} ${h === 1 ? "hora" : "horas"}?`, h * 60, [h * 60 + 10, h * 60 - 10, h * 100]); }
+    }
+  }
+  if (band === "eso") {
+    switch (rnd(1, 4)) {
+      case 1: { const p = [10, 20, 25, 50][rnd(0, 3)]; const base = rnd(2, 20) * 20; return build(`¿Cuánto es el ${p}% de ${base}?`, (base * p) / 100, [(base * p) / 100 + 5, (base * p) / 100 - 5, base / 2]); }
+      case 2: { const x = rnd(2, 12), b = rnd(1, 9), c = 2 * x + b; return build(`Resuelve 2x + ${b} = ${c}. x = ?`, x, [x + 1, x - 1, c - b]); }
+      case 3: { const a = rnd(2, 9), b = rnd(2, 9); return build(`(−${a}) × (−${b}) = ?`, a * b, [-(a * b), a * b - 1, -(a + b)]); }
+      default: { const w = rnd(3, 12), h = rnd(2, 9); return build(`Área de un rectángulo de ${w} × ${h}`, w * h, [2 * (w + h), w + h, w * h + w]); }
+    }
+  }
+  // bachillerato
+  switch (rnd(1, 4)) {
+    case 1: { const k = rnd(1, 5); return build(`log₁₀(10^${k}) = ?`, k, [k + 1, k - 1, 10 * k]); }
+    case 2: { const k = rnd(2, 6); return build(`2^${k} = ?`, 2 ** k, [2 ** k + 2, 2 ** k - 2, 2 * k]); }
+    case 3: { const p = [15, 30, 40, 75][rnd(0, 3)]; const base = rnd(2, 20) * 20; return build(`¿Cuánto es el ${p}% de ${base}?`, (base * p) / 100, [(base * p) / 100 + 10, (base * p) / 100 - 10, base / 2]); }
+    default: { const a = rnd(2, 8), b = rnd(2, 8), c = rnd(2, 8); const m = (a + b + c) / 3; const mm = Number.isInteger(m) ? m : Math.round(m); return build(`Media de ${a}, ${b} y ${c} (redondea)`, mm, [mm + 1, mm - 1, a + b + c]); }
+  }
+}
+
+// Devuelve n preguntas evitando las ya vistas (sig en `seen`)
+export function getQuizQuestions(name: string, level: string, seen: Set<string>, n = 5): QQ[] {
+  const g = detectGroup(name), b = detectBand(level);
+  if (g === "matematicas") {
+    const out: QQ[] = []; const used = new Set<string>(); let guard = 0;
+    while (out.length < n && guard++ < 300) { const q = mathGen(b); if (seen.has(q.sig) || used.has(q.sig)) continue; used.add(q.sig); out.push(q); }
+    return out;
+  }
+  const bank = (BANK[g][b] || BANK[g].eso || BANK.general.eso!).quiz;
+  const pool: QQ[] = bank.map((qz) => ({ q: qz.q, options: qz.options, answer: qz.answer, sig: sig(g + b + "|" + qz.q) }));
+  const unseen = shuffle(pool.filter((p) => !seen.has(p.sig)));
+  let res = unseen.slice(0, n);
+  if (res.length < n) {
+    const extra = shuffle(pool.filter((p) => !res.find((r) => r.sig === p.sig)));
+    res = res.concat(extra.slice(0, n - res.length));
+  }
+  return res;
+}

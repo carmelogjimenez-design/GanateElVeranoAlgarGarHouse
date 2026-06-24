@@ -3,7 +3,7 @@ import { Card, Btn, Avatar } from "@/components/ui/atoms";
 import { levelOf } from "@/lib/game";
 import { todayStr } from "@/lib/helpers";
 import type { Ctx } from "@/lib/types";
-import { FileSpreadsheet, FileText, TrendingUp, Trophy, BookOpen, Award } from "lucide-react";
+import { FileSpreadsheet, FileText, TrendingUp, Trophy, BookOpen, Award, AlertTriangle } from "lucide-react";
 
 export default function AdminAnalytics({ ctx }: { ctx: Ctx }) {
   const { db } = ctx;
@@ -104,6 +104,21 @@ export default function AdminAnalytics({ ctx }: { ctx: Ctx }) {
               </div>
             ))}
           </div>
+        </Card>
+      )}
+
+      {db.test_sessions.some((t) => t.suspicious) && (
+        <Card className="p-5">
+          <div className="flex items-center gap-2 mb-3"><AlertTriangle size={16} className="text-amber-500" /><h3 className="font-bold text-navy tracking-tight">Tests sospechosos (posible farmeo)</h3></div>
+          <div className="space-y-1.5">
+            {db.test_sessions.filter((t) => t.suspicious).slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1)).slice(0, 10).map((t) => (
+              <div key={t.id} className="flex items-center justify-between text-sm py-1">
+                <span className="font-medium text-navy">{name(t.kid_id)} · {db.subjects.find((s) => s.id === t.subject_id)?.name || "—"}</span>
+                <span className="text-slate-400 font-medium">{t.score}/{t.total} · {t.day}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 font-medium mt-3">Detectados por responder demasiado rápido. La recompensa de esos tests ya se redujo automáticamente.</p>
         </Card>
       )}
     </div>
