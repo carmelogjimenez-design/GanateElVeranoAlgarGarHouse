@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Card, Ring, Bar, IconTile, Chip, Btn, Modal } from "@/components/ui/atoms";
 import { rpc, todayStr } from "@/lib/helpers";
 import {
@@ -9,6 +10,10 @@ import {
 import { missionIcon, badgeIcon } from "@/lib/icons";
 import { COPY, pick } from "@/lib/copy";
 import { kidVibe } from "@/lib/vibes";
+import { sfx } from "@/lib/sfx";
+import { confetti } from "@/lib/confetti";
+import PlayerCard from "@/components/PlayerCard";
+import ActivityWall from "@/components/ActivityWall";
 import type { Ctx, Kid } from "@/lib/types";
 import {
   Flame, Clock, Trophy, ArrowRight, Check, Target, Award, Brain, Sparkles,
@@ -19,6 +24,8 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
   { ctx: Ctx; me: Kid; onTab: (t: string) => void; onMercado: () => void }) {
   const { db, flash, refresh, kid } = ctx;
   const [showBadges, setShowBadges] = useState(false);
+  const [cardOpen, setCardOpen] = useState(false);
+  const openCard = () => { setCardOpen(true); sfx("badge"); confetti(); };
   const ranking = [...db.kids].sort((a, b) => b.total_points - a.total_points);
   const rank = ranking.findIndex((k) => k.id === me.id) + 1;
   const team = db.teams.find((t) => t.id === me.team_id);
@@ -46,7 +53,7 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
 
   const mark = async (id: string) => {
     const { error } = await rpc("mark_done", { p_assignment: id, p_kid: me.id, p_pin: kid!.pin });
-    if (error) flash(error.message); else { flash(pick(COPY.done)); refresh(); }
+    if (error) { flash(error.message); sfx("reject"); } else { flash(pick(COPY.done)); sfx("complete"); refresh(); }
   };
 
   const lvl = levelOf(me.total_points);
@@ -77,6 +84,11 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
           </div>
         </div>
       </div>
+
+      {/* CARTA FUT (toca para verla en grande) */}
+      <button onClick={openCard} className="w-full text-left active:scale-[.99] transition gev-floaty">
+        <PlayerCard kid={me} db={db} size="sm" />
+      </button>
 
       {/* HERO GRID */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -231,6 +243,16 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
           </div>
         </Card>
       </div>
+
+      <ActivityWall ctx={ctx} author={me.name} />
+
+      {cardOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6" style={{ background: "rgba(10,26,48,.82)", backdropFilter: "blur(6px)" }} onClick={() => setCardOpen(false)}>
+          <div className="w-full max-w-xs gev-card-in" onClick={(e) => e.stopPropagation()}>
+            <PlayerCard kid={me} db={db} size="lg" />
+            <button onClick={() => setCardOpen(false)} className="w-full mt-4 bg-white/15 text-white font-bold rounded-2xl py-3 backdrop-blur">Cerrar</button>
+          </div>
+        </div>, document.body)}
 
       {showBadges && (
         <Modal title="Logros" onClose={() => setShowBadges(false)}>

@@ -4,6 +4,7 @@ import { Card, Chip, Btn, IconTile, Modal } from "@/components/ui/atoms";
 import { COPY, pick } from "@/lib/copy";
 import { rpc, todayStr } from "@/lib/helpers";
 import { notifyParents } from "@/lib/push";
+import { sfx } from "@/lib/sfx";
 import { sb } from "@/lib/supabase";
 import { missionIcon, freqColor } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
@@ -23,7 +24,7 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
     setBusy(a.id);
     const { error } = await rpc("claim_mission", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin });
     setBusy(null);
-    if (error) flash(error.message); else { flash("¡Tuya! Ahora complétala."); refresh(); }
+    if (error) flash(error.message); else { flash("¡Tuya! Ahora complétala."); sfx("claim"); refresh(); }
   };
 
   const complete = async (a: Assignment, file?: File | null) => {
@@ -37,7 +38,7 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
     }
     const { error } = await rpc("mark_done", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin, p_photo: url });
     setBusy(null);
-    if (error) flash(error.message); else { flash(pick(COPY.done)); notifyParents("Gánate el Verano", `${me.name} ha completado: ${a.title}`); refresh(); }
+    if (error) { flash(error.message); sfx("reject"); } else { flash(pick(COPY.done)); sfx("complete"); notifyParents("Gánate el Verano", `${me.name} ha completado: ${a.title}`); refresh(); }
   };
 
   return (

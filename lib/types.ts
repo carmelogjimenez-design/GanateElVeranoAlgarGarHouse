@@ -30,6 +30,7 @@ export type PointEvent = { id: string; kid_id: string; delta: number; reason: st
 
 export type Settings = { id: number; team_goal: number; challenge_label: string; challenge_until: string | null; weekly_goal_default: number; study_reward_points: number; study_goal_seconds: number };
 export type StudyReward = { id: string; kid_id: string; day: string; seconds: number; points: number; status: string; created_at: string; resolved_at: string | null };
+export type ActivityReaction = { id: string; event_id: string; emoji: string; author: string; created_at: string };
 export type GameEvent = { id: string; title: string; kind: string; multiplier: number; starts_at: string; ends_at: string; active: boolean; created_at: string };
 export type StudyQuestionSeen = { id: string; kid_id: string; subject_id: string; q_sig: string; correct: boolean; created_at: string };
 export type TestSession = { id: string; kid_id: string; subject_id: string; day: string; score: number; total: number; seconds_awarded: number; suspicious: boolean; created_at: string };
@@ -43,7 +44,7 @@ export type DB = {
   subjects: Subject[]; study_sessions: StudySession[]; point_events: PointEvent[];
   task_targets: TaskTarget[]; settings: Settings | null;
   badges_catalog: Badge[]; kid_badges: KidBadge[]; study_rewards: StudyReward[];
-  study_questions_seen: StudyQuestionSeen[]; test_sessions: TestSession[]; events: GameEvent[];
+  study_questions_seen: StudyQuestionSeen[]; test_sessions: TestSession[]; events: GameEvent[]; activity_reactions: ActivityReaction[];
 };
 
 export type Screen = "lobby" | "kid" | "admin";

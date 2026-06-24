@@ -14,7 +14,9 @@ import RankingList from "@/components/RankingList";
 import Celebration from "@/components/Celebration";
 import TutorialKid from "@/components/kid/TutorialKid";
 import type { Ctx } from "@/lib/types";
-import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap } from "lucide-react";
+import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap, Volume2, VolumeX } from "lucide-react";
+import { isMuted, setMuted } from "@/lib/sfx";
+import { dadSpeak } from "@/lib/voice";
 
 type Celeb = { icon: React.ReactNode; title: string; subtitle?: string; color?: string };
 
@@ -27,6 +29,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [celeb, setCeleb] = useState<Celeb | null>(null);
   const [tut, setTut] = useState(true);
+  const [muted, setMutedState] = useState(false);
   const myAsg = db.assignments.filter((a) => a.kid_id === me.id);
   const bell = myAsg.filter((a) => a.status === "pending").length;
   const myLevel = levelOf(me.total_points);
@@ -69,6 +72,16 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   if (me.study_enabled) nav.push(["estudio", "Estudio", BookOpen]);
   nav.push(["ranking", "Ranking", Trophy], ["tienda", "Tienda", ShoppingBag]);
 
+  useEffect(() => {
+    setMutedState(isMuted());
+    const speak = () => { dadSpeak(); window.removeEventListener("pointerdown", speak); };
+    const t = setTimeout(() => dadSpeak(), 600);
+    window.addEventListener("pointerdown", speak, { once: true });
+    return () => { clearTimeout(t); window.removeEventListener("pointerdown", speak); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const toggleMute = () => { const n = !muted; setMutedState(n); setMuted(n); };
+
   return (
     <>
       {tut && <TutorialKid kidName={me.name} onClose={() => setTut(false)} />}
@@ -85,6 +98,9 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
             <div className="font-extrabold text-navy text-sm">{me.total_points}</div>
             <span className="text-[10px] font-semibold text-slate-400 hidden sm:block">PUNTOS</span>
           </div>
+          <button onClick={toggleMute} title={muted ? "Activar sonido" : "Silenciar"} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+            {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+          </button>
           <button className="relative w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
             <Bell size={17} />{bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
           </button>

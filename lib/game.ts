@@ -52,3 +52,26 @@ export function teamWeeklyXp(events: PointEvent[], kidIds: string[]) {
 export function streakDays(asg: Assignment[]) {
   return new Set(asg.filter((a) => a.status === "approved" && a.validated_at).map((a) => a.validated_at!.slice(0, 10))).size;
 }
+
+// ===== Carta FUT: stats y rareza =====
+import type { DB } from "@/lib/types";
+const clamp99 = (n: number) => Math.max(40, Math.min(99, Math.round(n)));
+export function playerStats(kid: Kid, db: DB) {
+  const taskXp = db.point_events.filter((e) => e.kid_id === kid.id && e.delta > 0 && e.type === "task").reduce((a, b) => a + b.delta, 0);
+  const studySec = db.study_sessions.filter((s) => s.kid_id === kid.id).reduce((a, b) => a + b.seconds, 0);
+  const tests = db.test_sessions.filter((t) => t.kid_id === kid.id).length;
+  const streak = streakDays(db.assignments.filter((a) => a.kid_id === kid.id));
+  const activeDays = new Set(db.point_events.filter((e) => e.kid_id === kid.id && e.delta > 0).map((e) => (e.created_at || "").slice(0, 10))).size;
+  const fuerza = clamp99(50 + taskXp * 0.7);
+  const cerebro = clamp99(50 + (studySec / 3600) * 6 + tests * 2);
+  const constancia = clamp99(48 + streak * 5 + activeDays * 2);
+  const ovr = clamp99((fuerza + cerebro + constancia) / 3 + levelOf(kid.total_points) - 1);
+  return { fuerza, cerebro, constancia, ovr };
+}
+export type Rarity = { key: string; label: string; grad: [string, string]; ring: string; text: string };
+export function rarityOf(ovr: number): Rarity {
+  if (ovr >= 90) return { key: "legendario", label: "LEGENDARIO", grad: ["#7C3AED", "#19D3AE"], ring: "#C4B5FD", text: "#fff" };
+  if (ovr >= 78) return { key: "epico", label: "ÉPICO", grad: ["#D4AF37", "#F6E27A"], ring: "#FDE68A", text: "#3A2E00" };
+  if (ovr >= 64) return { key: "raro", label: "RARO", grad: ["#7E8A99", "#C9D2DC"], ring: "#E2E8F0", text: "#1E293B" };
+  return { key: "comun", label: "COMÚN", grad: ["#A06A3B", "#C89B6A"], ring: "#E7C9A6", text: "#2A1A09" };
+}

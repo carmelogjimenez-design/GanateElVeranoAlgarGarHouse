@@ -4,7 +4,7 @@ import type { DB } from "./types";
 export async function loadAll(): Promise<DB> {
   const tables = [
     "teams", "kids", "tasks", "assignments", "rewards",
-    "redemptions", "gifts", "subjects", "study_sessions", "point_events", "task_targets", "badges_catalog", "kid_badges", "study_rewards", "study_questions_seen", "test_sessions", "events",
+    "redemptions", "gifts", "subjects", "study_sessions", "point_events", "task_targets", "badges_catalog", "kid_badges", "study_rewards", "study_questions_seen", "test_sessions", "events", "activity_reactions",
   ] as const;
   const out: Record<string, unknown[]> = {};
   await Promise.all(

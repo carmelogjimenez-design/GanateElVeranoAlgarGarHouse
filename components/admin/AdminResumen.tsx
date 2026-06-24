@@ -3,6 +3,7 @@ import { Card, Avatar, Bar, Btn, Stat } from "@/components/ui/atoms";
 import { last7 } from "@/lib/helpers";
 import { levelOf } from "@/lib/game";
 import type { Ctx, Kid } from "@/lib/types";
+import ActivityWall from "@/components/ActivityWall";
 import { Users, ClipboardCheck, Target, Sparkles, Star, ArrowRight, FlaskConical, Trophy, CalendarDays, CalendarRange, CalendarClock, CalendarCheck } from "lucide-react";
 
 const FREQS: { key: string; label: string; Icon: typeof CalendarDays; color: string }[] = [
@@ -113,6 +114,7 @@ export default function AdminResumen({ ctx, onGo }: { ctx: Ctx; onGo: (t: string
           </Card>
         </div>
       </div>
+      <div className="mt-6"><ActivityWall ctx={ctx} author="Papá / Mamá" /></div>
     </div>
   );
 }
