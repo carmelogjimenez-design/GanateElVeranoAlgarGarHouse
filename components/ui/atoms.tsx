@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { initials } from "@/lib/game";
+import { avatarIcon } from "@/lib/icons";
 
 /* ---------- Card ---------- */
 export const Card = ({ children, className = "", onClick, style }:
@@ -39,13 +40,16 @@ export const Bar = ({ v, max, c = "#FF8A00" }: { v: number; max: number; c?: str
   </div>
 );
 
-/* ---------- Avatar (monograma, sin emojis) ---------- */
-export const Avatar = ({ name, color, size = 40 }: { name: string; color: string; size?: number }) => (
-  <div style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}
-    className="rounded-2xl flex items-center justify-center text-white font-bold shrink-0">
-    {initials(name)}
-  </div>
-);
+/* ---------- Avatar (icono desbloqueable o monograma) ---------- */
+export const Avatar = ({ name, color, size = 40, avatar }: { name: string; color: string; size?: number; avatar?: string }) => {
+  const Icon = avatar ? avatarIcon(avatar) : null;
+  return (
+    <div style={{ width: size, height: size, background: color, fontSize: size * 0.38 }}
+      className="rounded-2xl flex items-center justify-center text-white font-bold shrink-0">
+      {Icon ? <Icon size={size * 0.55} /> : initials(name)}
+    </div>
+  );
+};
 
 /* ---------- Ring (progreso circular) ---------- */
 export const Ring = ({ value, size = 132, stroke = 11, color = "#FF8A00", track = "rgba(255,255,255,.18)", children }:

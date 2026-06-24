@@ -4,13 +4,13 @@ import type { DB } from "./types";
 export async function loadAll(): Promise<DB> {
   const tables = [
     "teams", "kids", "tasks", "assignments", "rewards",
-    "redemptions", "gifts", "subjects", "study_sessions", "point_events", "task_targets",
+    "redemptions", "gifts", "subjects", "study_sessions", "point_events", "task_targets", "badges_catalog", "kid_badges",
   ] as const;
   const out: Record<string, unknown[]> = {};
   await Promise.all(
     tables.map(async (t) => {
       const cols = t === "kids"
-        ? "id,name,emoji,color,team_id,total_points,study_enabled,active,created_at,weekly_goal,can_tutor,app_access"
+        ? "id,name,emoji,color,team_id,total_points,study_enabled,active,created_at,weekly_goal,can_tutor,app_access,avatar"
         : "*";
       const { data } = await sb.from(t).select(cols).order("created_at", { ascending: false });
       out[t] = data ?? [];

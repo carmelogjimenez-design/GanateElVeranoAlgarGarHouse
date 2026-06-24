@@ -22,3 +22,30 @@ export function missionIcon(text: string): LucideIcon {
   if (/estudi|matem|lengua|hist|ingl/.test(t)) return BookOpen;
   return Target;
 }
+
+import {
+  Flame, Brain, Star, Medal, Timer, Crown, Award,
+  Cat, Dog, Rabbit, Bird, Fish, Ghost, Rocket, Gamepad2, Bot, Origami,
+} from "lucide-react";
+
+const BADGE_ICONS: Record<string, LucideIcon> = {
+  target: Target, flame: Flame, brain: Brain, star: Star,
+  sparkles: Sparkles, medal: Medal, timer: Timer, crown: Crown,
+};
+export const badgeIcon = (key: string): LucideIcon => BADGE_ICONS[key] || Award;
+
+export type AvatarDef = { key: string; Icon: LucideIcon; level: number; name: string };
+export const AVATARS: AvatarDef[] = [
+  { key: "cat", Icon: Cat, level: 1, name: "Gato" },
+  { key: "dog", Icon: Dog, level: 1, name: "Perro" },
+  { key: "rabbit", Icon: Rabbit, level: 2, name: "Conejo" },
+  { key: "bird", Icon: Bird, level: 3, name: "Pájaro" },
+  { key: "fish", Icon: Fish, level: 4, name: "Pez" },
+  { key: "ghost", Icon: Ghost, level: 5, name: "Fantasma" },
+  { key: "origami", Icon: Origami, level: 6, name: "Origami" },
+  { key: "bot", Icon: Bot, level: 7, name: "Robot" },
+  { key: "rocket", Icon: Rocket, level: 8, name: "Cohete" },
+  { key: "gamepad", Icon: Gamepad2, level: 10, name: "Gamer" },
+  { key: "crown", Icon: Crown, level: 12, name: "Corona" },
+];
+export const avatarIcon = (key: string): LucideIcon | null => AVATARS.find((a) => a.key === key)?.Icon || null;

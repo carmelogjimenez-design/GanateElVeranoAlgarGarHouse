@@ -2,7 +2,7 @@ export type Team = { id: string; name: string; emoji: string; color: string; cre
 export type Kid = {
   id: string; name: string; emoji: string; color: string; team_id: string | null;
   total_points: number; study_enabled: boolean; active: boolean; created_at: string; pin?: string;
-  weekly_goal: number; can_tutor: boolean; app_access: boolean;
+  weekly_goal: number; can_tutor: boolean; app_access: boolean; avatar: string;
 };
 export type Task = {
   id: string; title: string; description: string; category: string; frequency: string;
@@ -29,12 +29,15 @@ export type PointEvent = { id: string; kid_id: string; delta: number; reason: st
 
 export type Settings = { id: number; team_goal: number; challenge_label: string; challenge_until: string | null; weekly_goal_default: number };
 export type TaskTarget = { id: string; task_id: string; kid_id: string; created_at: string };
+export type Badge = { code: string; name: string; description: string; icon: string; color: string; sort: number };
+export type KidBadge = { id: string; kid_id: string; badge_code: string; earned_at: string };
 
 export type DB = {
   teams: Team[]; kids: Kid[]; tasks: Task[]; assignments: Assignment[];
   rewards: Reward[]; redemptions: Redemption[]; gifts: Gift[];
   subjects: Subject[]; study_sessions: StudySession[]; point_events: PointEvent[];
   task_targets: TaskTarget[]; settings: Settings | null;
+  badges_catalog: Badge[]; kid_badges: KidBadge[];
 };
 
 export type Screen = "lobby" | "kid" | "admin";

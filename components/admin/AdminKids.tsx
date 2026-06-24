@@ -103,7 +103,7 @@ export default function AdminKids({ ctx }: { ctx: Ctx }) {
           return (
             <Card key={k.id} className="p-3.5">
               <div className="flex items-center gap-3">
-                <Avatar name={k.name} color={k.color} size={42} />
+                <Avatar name={k.name} color={k.color} size={42} avatar={k.avatar} />
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-navy flex items-center gap-2">{k.name}{k.can_tutor && <Chip tone="teal">tutor</Chip>}{!k.app_access && <Chip tone="slate">sin móvil</Chip>}</div>
                   <div className="text-xs text-slate-400">Nv {levelOf(k.total_points)} · {k.total_points} pts · {team?.name || "sin equipo"}</div>

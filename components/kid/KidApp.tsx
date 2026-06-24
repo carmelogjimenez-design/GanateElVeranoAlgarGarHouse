@@ -1,81 +1,124 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, Modal } from "@/components/ui/atoms";
+import { rpc } from "@/lib/helpers";
+import { levelOf } from "@/lib/game";
+import { AVATARS, badgeIcon } from "@/lib/icons";
 import KidHome from "@/components/kid/KidHome";
 import KidTasks from "@/components/kid/KidTasks";
 import KidRewards from "@/components/kid/KidRewards";
 import KidMarket from "@/components/kid/KidMarket";
 import KidStudy from "@/components/kid/KidStudy";
 import RankingList from "@/components/RankingList";
+import Celebration from "@/components/Celebration";
 import type { Ctx } from "@/lib/types";
-import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sun } from "lucide-react";
+import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sun, Sparkles, Lock } from "lucide-react";
+
+type Celeb = { icon: React.ReactNode; title: string; subtitle?: string; color?: string };
 
 export default function KidApp({ ctx }: { ctx: Ctx }) {
-  const { db, kid, setScreen, isAdmin } = ctx;
+  const { db, kid, setScreen, isAdmin, refresh, flash } = ctx;
   const me = db.kids.find((k) => k.id === kid!.id) || kid!;
   const [tab, setTab] = useState("inicio");
   const [mercado, setMercado] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
+  const [celeb, setCeleb] = useState<Celeb | null>(null);
   const myAsg = db.assignments.filter((a) => a.kid_id === me.id);
   const bell = myAsg.filter((a) => a.status === "pending").length;
+  const myLevel = levelOf(me.total_points);
 
-  const nav: [string, string, typeof Home][] = [
-    ["inicio", "Inicio", Home], ["tareas", "Misiones", ClipboardList],
-  ];
+  // Detección de subida de nivel / nueva medalla (con confeti)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const lk = `gev_lvl_${me.id}`;
+    const prev = Number(localStorage.getItem(lk) || "0");
+    if (prev && myLevel > prev) setCeleb({ icon: <Sparkles size={44} />, title: `¡Nivel ${myLevel}!`, subtitle: "Has subido de nivel", color: me.color });
+    localStorage.setItem(lk, String(myLevel));
+
+    const bk = `gev_badges_${me.id}`;
+    const codes = db.kid_badges.filter((b) => b.kid_id === me.id).map((b) => b.badge_code);
+    let prevB: string[] = [];
+    try { prevB = JSON.parse(localStorage.getItem(bk) || "[]"); } catch { prevB = []; }
+    const fresh = codes.filter((c) => !prevB.includes(c));
+    if (prevB.length > 0 && fresh.length) {
+      const b = db.badges_catalog.find((x) => x.code === fresh[0]);
+      if (b) { const Icon = badgeIcon(b.icon); setCeleb((c) => c || { icon: <Icon size={44} />, title: "¡Nueva medalla!", subtitle: b.name, color: b.color }); }
+    }
+    localStorage.setItem(bk, JSON.stringify(codes));
+  }, [me.total_points, me.id, myLevel, me.color, db.kid_badges, db.badges_catalog]);
+
+  const chooseAvatar = async (key: string) => {
+    const { error } = await rpc("set_avatar", { p_kid: me.id, p_pin: kid!.pin, p_avatar: key });
+    if (error) flash(error.message); else { refresh(); setAvatarOpen(false); }
+  };
+
+  const nav: [string, string, typeof Home][] = [["inicio", "Inicio", Home], ["tareas", "Misiones", ClipboardList]];
   if (me.study_enabled) nav.push(["estudio", "Estudio", BookOpen]);
   nav.push(["ranking", "Ranking", Trophy], ["tienda", "Tienda", ShoppingBag]);
 
   return (
     <div className="min-h-screen pb-24">
-      {/* HEADER */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-brand/12 flex items-center justify-center"><Sun size={20} className="text-brand" /></div>
-          </div>
+          <div className="hidden sm:flex items-center gap-2"><div className="w-9 h-9 rounded-xl bg-brand/12 flex items-center justify-center"><Sun size={20} className="text-brand" /></div></div>
           <div className="flex-1 min-w-0">
             <div className="font-extrabold text-navy tracking-tight leading-none">¡Hola, {me.name}!</div>
             <div className="text-xs text-slate-400 hidden sm:block mt-0.5">Hoy es un gran día para sumar puntos</div>
           </div>
           <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-amber-50">
             <Star size={16} className="text-amber-400 fill-amber-400" />
-            <div className="leading-none"><div className="font-extrabold text-navy text-sm">{me.total_points}</div></div>
+            <div className="font-extrabold text-navy text-sm">{me.total_points}</div>
             <span className="text-[10px] font-semibold text-slate-400 hidden sm:block">PUNTOS</span>
           </div>
           <button className="relative w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-            <Bell size={17} />
-            {bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
+            <Bell size={17} />{bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
           </button>
-          <Avatar name={me.name} color={me.color} size={36} />
+          <button onClick={() => setAvatarOpen(true)} title="Cambiar avatar"><Avatar name={me.name} color={me.color} size={36} avatar={me.avatar} /></button>
           <button onClick={() => setScreen(isAdmin ? "admin" : "lobby")} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500" title="Salir"><LogOut size={16} /></button>
         </div>
       </header>
 
-      {/* CONTENT */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-5">
         {isAdmin && <div className="mb-4 bg-navy/5 border border-navy/10 rounded-xl px-3 py-2 text-xs font-semibold text-navy flex items-center justify-between"><span>🧪 Modo test (superadmin): estás viendo el panel de {me.name}</span><button onClick={() => setScreen("admin")} className="text-brand">Volver a padres</button></div>}
         {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} />}
         {tab === "tareas" && <div className="max-w-2xl"><KidTasks ctx={ctx} me={me} asg={myAsg} /></div>}
         {tab === "estudio" && <div className="max-w-2xl"><KidStudy ctx={ctx} me={me} /></div>}
         {tab === "ranking" && <div className="max-w-2xl"><RankingList db={db} highlight={me.id} /></div>}
-        {tab === "tienda" && <KidRewards ctx={ctx} me={me} />}
+        {tab === "tienda" && <KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} />}
       </main>
 
-      {/* BOTTOM NAV */}
       <nav className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur border-t border-slate-200">
         <div className="max-w-2xl mx-auto flex">
           {nav.map(([k, label, Icon]) => {
             const on = tab === k;
-            return (
-              <button key={k} onClick={() => setTab(k)} className="flex-1 flex flex-col items-center gap-0.5 py-2.5" style={{ color: on ? me.color : "#94A3B8" }}>
-                <Icon size={22} strokeWidth={on ? 2.4 : 2} />
-                <span className="text-[10px] font-semibold">{label}</span>
-              </button>
-            );
+            return <button key={k} onClick={() => setTab(k)} className="flex-1 flex flex-col items-center gap-0.5 py-2.5" style={{ color: on ? me.color : "#94A3B8" }}><Icon size={22} strokeWidth={on ? 2.4 : 2} /><span className="text-[10px] font-semibold">{label}</span></button>;
           })}
         </div>
       </nav>
 
       {mercado && <Modal title="Mercado de hermanos" onClose={() => setMercado(false)}><KidMarket ctx={ctx} me={me} /></Modal>}
+
+      {avatarOpen && (
+        <Modal title="Elige tu avatar" onClose={() => setAvatarOpen(false)}>
+          <p className="text-sm text-slate-400 font-medium mb-3">Desbloqueas avatares al subir de nivel. Estás en el nivel {myLevel}.</p>
+          <div className="grid grid-cols-4 gap-3">
+            {AVATARS.map((a) => {
+              const unlocked = myLevel >= a.level;
+              const sel = me.avatar === a.key;
+              return (
+                <button key={a.key} disabled={!unlocked} onClick={() => chooseAvatar(a.key)} className="flex flex-col items-center gap-1">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${sel ? "ring-2 ring-offset-2 ring-navy" : ""}`} style={{ background: unlocked ? me.color : "#E2E8F0", color: unlocked ? "#fff" : "#94A3B8" }}>
+                    {unlocked ? <a.Icon size={26} /> : <Lock size={20} />}
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-400">{unlocked ? a.name : `Nv ${a.level}`}</span>
+                </button>
+              );
+            })}
+          </div>
+        </Modal>
+      )}
+
+      {celeb && <Celebration icon={celeb.icon} title={celeb.title} subtitle={celeb.subtitle} color={celeb.color} onClose={() => setCeleb(null)} />}
     </div>
   );
 }

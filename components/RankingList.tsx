@@ -14,7 +14,7 @@ export default function RankingList({ db, highlight }: { db: DB; highlight?: str
         {ranking.map((k, i) => (
           <div key={k.id} className={`flex items-center gap-3 py-2 ${k.id === highlight ? "-mx-2 px-2 bg-orange-50 rounded-xl" : ""}`}>
             <span className={`w-5 text-center text-sm font-bold ${i < 3 ? "text-brand" : "text-slate-300"}`}>{i + 1}</span>
-            <Avatar name={k.name} color={k.color} size={36} />
+            <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />
             <div className="flex-1 min-w-0">
               <div className="flex justify-between text-sm"><span className="font-semibold text-navy truncate">{k.name}</span><span className="font-bold text-navy tabular-nums">{k.total_points} XP</span></div>
               <div className="flex items-center gap-2 mt-1"><Chip tone="slate">Nv {levelOf(k.total_points)}</Chip><div className="flex-1"><Bar v={k.total_points} max={max} c={k.color} /></div></div>

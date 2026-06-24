@@ -1,11 +1,12 @@
 "use client";
-import { Card, Ring, Bar, IconTile, Chip, Btn } from "@/components/ui/atoms";
+import { useState } from "react";
+import { Card, Ring, Bar, IconTile, Chip, Btn, Modal } from "@/components/ui/atoms";
 import { rpc } from "@/lib/helpers";
 import {
   levelOf, levelProgress, xpToNext, nearestReward,
   weeklyXp, weekdayBars, studyTodaySeconds, teamWeeklyXp, streakDays,
 } from "@/lib/game";
-import { missionIcon } from "@/lib/icons";
+import { missionIcon, badgeIcon } from "@/lib/icons";
 import { COPY, pick } from "@/lib/copy";
 import type { Ctx, Kid } from "@/lib/types";
 import {
@@ -16,6 +17,7 @@ import {
 export default function KidHome({ ctx, me, onTab, onMercado }:
   { ctx: Ctx; me: Kid; onTab: (t: string) => void; onMercado: () => void }) {
   const { db, flash, refresh, kid } = ctx;
+  const [showBadges, setShowBadges] = useState(false);
   const ranking = [...db.kids].sort((a, b) => b.total_points - a.total_points);
   const rank = ranking.findIndex((k) => k.id === me.id) + 1;
   const team = db.teams.find((t) => t.id === me.team_id);
@@ -47,16 +49,8 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
   };
 
   const lvl = levelOf(me.total_points);
-  const badges = [
-    { Icon: Target, label: "Primera misión", on: myAsg.some((a) => a.status === "approved") },
-    { Icon: Flame, label: "Racha 3 días", on: streak >= 3 },
-    { Icon: Brain, label: "A estudiar", on: db.study_sessions.some((s) => s.kid_id === me.id) },
-    { Icon: Star, label: "100 puntos", on: me.total_points >= 100 },
-    { Icon: Sparkles, label: "Constancia", on: myAsg.filter((a) => a.status === "approved").length >= 5 },
-    { Icon: Crown, label: "Nº 1", on: rank === 1 },
-    { Icon: Timer, label: "Maratón", on: db.study_sessions.filter((s) => s.kid_id === me.id).reduce((a, b) => a + b.seconds, 0) >= 3600 },
-    { Icon: Medal, label: "Nivel 5", on: lvl >= 5 },
-  ];
+  const earned = new Set(db.kid_badges.filter((b) => b.kid_id === me.id).map((b) => b.badge_code));
+  const catalog = [...db.badges_catalog].sort((a, b) => a.sort - b.sort);
 
   const days = ["L", "M", "X", "J", "V", "S", "D"];
   const weekdayName = ["L", "M", "X", "J", "V", "S", "D"][(new Date().getDay() + 6) % 7];
@@ -170,14 +164,19 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
 
           {/* Medallas */}
           <Card className="p-4">
-            <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-navy tracking-tight">Tus medallas</h3><Award size={18} className="text-brand" /></div>
+            <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-navy tracking-tight">Tus medallas</h3><button onClick={() => setShowBadges(true)} className="text-sm font-semibold text-brand">Ver todas</button></div>
             <div className="grid grid-cols-4 gap-3">
-              {badges.map((b, i) => (
-                <div key={i} className="flex flex-col items-center gap-1" title={b.label}>
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${b.on ? "text-white" : "bg-slate-100 text-slate-300"}`} style={b.on ? { background: me.color } : undefined}><b.Icon size={22} /></div>
-                </div>
-              ))}
+              {catalog.slice(0, 8).map((b) => {
+                const Icon = badgeIcon(b.icon);
+                const on = earned.has(b.code);
+                return (
+                  <div key={b.code} className="flex flex-col items-center" title={b.name}>
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${on ? "text-white" : "bg-slate-100 text-slate-300"}`} style={on ? { background: b.color } : undefined}><Icon size={22} /></div>
+                  </div>
+                );
+              })}
             </div>
+            <div className="text-xs text-slate-400 font-medium mt-3">{earned.size} de {catalog.length} desbloqueadas</div>
           </Card>
         </div>
       </div>
@@ -211,6 +210,24 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
           </div>
         </Card>
       </div>
+
+      {showBadges && (
+        <Modal title="Logros" onClose={() => setShowBadges(false)}>
+          <div className="space-y-2.5">
+            {catalog.map((b) => {
+              const Icon = badgeIcon(b.icon);
+              const on = earned.has(b.code);
+              return (
+                <div key={b.code} className={`flex items-center gap-3 p-3 rounded-xl ${on ? "bg-slate-50" : "opacity-50"}`}>
+                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: on ? b.color : "#CBD5E1" }}><Icon size={20} /></div>
+                  <div className="flex-1 min-w-0"><div className="font-semibold text-navy">{b.name}</div><div className="text-xs text-slate-400">{b.description}</div></div>
+                  {on && <span className="text-xs font-bold text-teal">✓</span>}
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

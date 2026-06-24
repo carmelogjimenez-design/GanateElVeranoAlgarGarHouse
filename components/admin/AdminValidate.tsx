@@ -24,7 +24,7 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
             return (
               <Card key={a.id} className="p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  {k && <Avatar name={k.name} color={k.color} size={36} />}
+                  {k && <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />}
                   <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">{a.title}</div><div className="text-xs text-slate-400">{k?.name}{a.note ? ` · "${a.note}"` : ""}</div></div>
                   <Chip tone="brand">+{a.points} XP</Chip>
                 </div>
@@ -45,7 +45,7 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
             return (
               <Card key={r.id} className="p-4">
                 <div className="flex items-center gap-3 mb-3">
-                  {k && <Avatar name={k.name} color={k.color} size={36} />}
+                  {k && <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />}
                   <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">{r.title}</div><div className="text-xs text-slate-400">{k?.name}</div></div>
                   <Chip tone="teal">{r.cost} XP</Chip>
                 </div>

@@ -35,7 +35,7 @@ export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
           const other = db.kids.find((k) => k.id === (out ? g.to_kid : g.from_kid));
           return (
             <Card key={g.id} className="p-3 flex items-center gap-3">
-              {other && <Avatar name={other.name} color={other.color} size={32} />}
+              {other && <Avatar name={other.name} color={other.color} size={32} avatar={other.avatar} />}
               <span className="text-sm font-medium text-navy flex-1">{out ? "Para" : "De"} {other?.name}</span>
               <span className={`text-sm font-bold ${out ? "text-red-500" : "text-teal"}`}>{out ? "-" : "+"}{g.points} XP</span>
             </Card>

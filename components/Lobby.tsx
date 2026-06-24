@@ -35,7 +35,7 @@ export default function Lobby({ ctx, onKid, onLogin }: { ctx: Ctx; onKid: (k: Ki
             {ranking.map((k, i) => (
               <div key={k.id} className="flex items-center gap-3 py-2">
                 <span className={`w-5 text-center text-sm font-bold ${i < 3 ? "text-brand" : "text-slate-300"}`}>{i + 1}</span>
-                <Avatar name={k.name} color={k.color} size={36} />
+                <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center text-sm"><span className="font-semibold text-navy truncate">{k.name}</span><span className="font-bold text-navy tabular-nums">{k.total_points}</span></div>
                   <div className="flex items-center gap-2 mt-1"><Chip tone="slate">Nv {levelOf(k.total_points)}</Chip><div className="flex-1"><Bar v={k.total_points} max={max} c={k.color} /></div></div>
@@ -60,7 +60,7 @@ export default function Lobby({ ctx, onKid, onLogin }: { ctx: Ctx; onKid: (k: Ki
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
         {db.kids.map((k) => (
           <Card key={k.id} onClick={() => onKid(k)} className="p-4 flex flex-col items-center">
-            <Avatar name={k.name} color={k.color} size={48} />
+            <Avatar name={k.name} color={k.color} size={48} avatar={k.avatar} />
             <span className="font-semibold text-sm mt-2 text-navy truncate w-full text-center">{k.name}</span>
             <span className="text-xs text-slate-400 font-medium">Nivel {levelOf(k.total_points)}</span>
           </Card>

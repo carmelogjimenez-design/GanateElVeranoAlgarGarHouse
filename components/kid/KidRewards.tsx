@@ -5,12 +5,12 @@ import { missionIcon } from "@/lib/icons";
 import type { Ctx, Kid, Reward } from "@/lib/types";
 import { Lock } from "lucide-react";
 
-export default function KidRewards({ ctx, me }: { ctx: Ctx; me: Kid }) {
+export default function KidRewards({ ctx, me, onCelebrate }: { ctx: Ctx; me: Kid; onCelebrate?: () => void }) {
   const { db, flash, refresh, kid } = ctx;
   const ask = async (r: Reward) => {
     const { error } = await rpc("request_redemption", { p_kid: me.id, p_pin: kid!.pin, p_reward: r.id });
-    flash(error ? error.message : "Canje solicitado. A convencer a los jefes.");
-    if (!error) refresh();
+    if (error) { flash(error.message); return; }
+    onCelebrate?.(); refresh();
   };
   return (
     <div className="pb-6">
