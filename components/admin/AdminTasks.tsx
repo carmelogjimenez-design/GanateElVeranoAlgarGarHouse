@@ -115,33 +115,47 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
         <Btn variant="primary" className="w-full flex items-center justify-center gap-1.5" onClick={create}><Plus size={17} /> Crear misión</Btn>
       </Card>
 
-      <div className="flex items-center justify-between mb-2 px-0.5">
-        <h3 className="font-bold text-navy tracking-tight">Misiones ({db.tasks.length})</h3>
+      <div className="flex items-center justify-between mb-3 px-0.5">
+        <h3 className="font-bold text-navy tracking-tight">Catálogo de misiones ({db.tasks.length})</h3>
         <Btn variant="teal" className="text-sm py-2 flex items-center gap-1.5" onClick={generate}><CalendarClock size={15} /> Generar hoy</Btn>
       </div>
-      <div className="space-y-2.5">
-        {db.tasks.map((t) => {
-          const Icon = missionIcon(t.title);
-          const targets = db.task_targets.filter((tt) => tt.task_id === t.id).length;
-          return (
-            <Card key={t.id} className="p-3.5">
-              <div className="flex items-center gap-3">
-                <IconTile color="#0B1F3A"><Icon size={18} /></IconTile>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-navy truncate">{t.title}</div>
-                  <div className="text-xs text-slate-400">{t.frequency} · {t.difficulty}{t.photo_required ? " · foto" : ""}{targets ? ` · recurrente (${targets})` : ""}</div>
-                </div>
-                <Chip tone="brand">+{t.points}</Chip>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <Btn variant="ghost" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setRecTask(t)}><Repeat size={15} /> Recurrente</Btn>
-                <Btn variant="primary" className="flex-1 text-sm py-2" onClick={() => setAsgTask(t)}>Asignar una vez</Btn>
-                <button onClick={async () => { await sb.from("tasks").delete().eq("id", t.id); refresh(); }} className="text-slate-300 hover:text-red-400 px-2"><Trash2 size={17} /></button>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
+      {([["diaria", "Diarias"], ["2/semana", "2 por semana"], ["semanal", "Semanales"], ["quincenal", "Quincenales"], ["mensual", "Mensuales"], ["personalizada", "Personalizadas"]] as const).map(([freq, label]) => {
+        const group = db.tasks.filter((t) => t.frequency === freq);
+        if (!group.length) return null;
+        return (
+          <div key={freq} className="mb-5">
+            <div className="flex items-center gap-2 mb-2 px-0.5"><span className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</span><span className="text-xs font-semibold text-slate-300">· {group.length}</span></div>
+            <div className="space-y-2.5">
+              {group.map((t) => {
+                const Icon = missionIcon(t.title);
+                const targets = db.task_targets.filter((tt) => tt.task_id === t.id).length;
+                const diffColor = t.difficulty === "dificil" ? "#EF4444" : t.difficulty === "media" ? "#FF8A00" : "#22C55E";
+                return (
+                  <Card key={t.id} className="p-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: diffColor }}><Icon size={22} /></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-navy truncate">{t.title}</div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <Chip tone="brand">+{t.points} XP</Chip>
+                          {t.photo_required && <Chip tone="amber">foto</Chip>}
+                          {targets > 0 && <Chip tone="teal">recurrente · {targets}</Chip>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Btn variant="ghost" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setRecTask(t)}><Repeat size={15} /> Recurrente</Btn>
+                      <Btn variant="primary" className="flex-1 text-sm py-2" onClick={() => setAsgTask(t)}>Asignar</Btn>
+                      <button onClick={async () => { if (confirm(`¿Eliminar "${t.title}"?`)) { await sb.from("tasks").delete().eq("id", t.id); refresh(); } }} className="text-slate-300 hover:text-red-400 px-2"><Trash2 size={17} /></button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {db.tasks.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">Aún no hay misiones. Crea la primera arriba.</Card>}
       {asgTask && <AssignModal ctx={ctx} task={asgTask} onClose={() => setAsgTask(null)} />}
       {recTask && <RecurringModal ctx={ctx} task={recTask} onClose={() => setRecTask(null)} />}
     </div>

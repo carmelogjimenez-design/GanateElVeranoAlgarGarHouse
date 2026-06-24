@@ -13,7 +13,7 @@ import KidStudy from "@/components/kid/KidStudy";
 import RankingList from "@/components/RankingList";
 import Celebration from "@/components/Celebration";
 import type { Ctx } from "@/lib/types";
-import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera } from "lucide-react";
+import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap } from "lucide-react";
 
 type Celeb = { icon: React.ReactNode; title: string; subtitle?: string; color?: string };
 
@@ -28,6 +28,8 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const myAsg = db.assignments.filter((a) => a.kid_id === me.id);
   const bell = myAsg.filter((a) => a.status === "pending").length;
   const myLevel = levelOf(me.total_points);
+  const now = Date.now();
+  const dxp = db.events.find((e) => e.kind === "double_xp" && e.active && new Date(e.starts_at).getTime() <= now && new Date(e.ends_at).getTime() >= now);
 
   // Detección de subida de nivel / nueva medalla (con confeti)
   useEffect(() => {
@@ -88,6 +90,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-5">
+        {dxp && <div className="mb-4 rounded-xl px-3 py-2.5 text-sm font-bold text-white flex items-center gap-2" style={{ background: "linear-gradient(90deg,#FF8A00,#EAB308)" }}><Zap size={16} /> {dxp.title} · ¡x{dxp.multiplier} en tus misiones!</div>}
         {isAdmin && <div className="mb-4 bg-navy/5 border border-navy/10 rounded-xl px-3 py-2 text-xs font-semibold text-navy flex items-center justify-between"><span>🧪 Modo test (superadmin): estás viendo el panel de {me.name}</span><button onClick={() => setScreen("admin")} className="text-brand">Volver a padres</button></div>}
         {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} />}
         {tab === "tareas" && <div className="max-w-2xl"><KidTasks ctx={ctx} me={me} asg={myAsg} /></div>}

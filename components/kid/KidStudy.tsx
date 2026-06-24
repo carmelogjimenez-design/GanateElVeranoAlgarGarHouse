@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Card, Btn, Chip, Bar, Modal, IconTile } from "@/components/ui/atoms";
 import { rpc, fmtMin, todayStr } from "@/lib/helpers";
 import { studyTodaySeconds } from "@/lib/game";
-import { getStudyContent, getQuizQuestions, type QQ } from "@/lib/study";
+import { getStudyContent, getQuizQuestions, sig, type QQ } from "@/lib/study";
 import { notifyParents } from "@/lib/push";
 import type { Ctx, Kid, Subject } from "@/lib/types";
 import { Play, Square, BookOpen, ListChecks, FileQuestion, Trophy, Clock, CheckCircle2, Sparkles, AlertTriangle } from "lucide-react";
@@ -131,7 +131,23 @@ function TemarioModal({ subject, onClose }: { subject: Subject; onClose: () => v
 
 function TestModal({ ctx, me, subject, seen, onClose }: { ctx: Ctx; me: Kid; subject: Subject; seen: Set<string>; onClose: () => void }) {
   const { flash, refresh, kid } = ctx;
-  const [questions] = useState<QQ[]>(() => getQuizQuestions(subject.name, subject.level, seen, 5));
+  const [questions, setQuestions] = useState<QQ[]>(() => getQuizQuestions(subject.name, subject.level, seen, 5));
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/generate-questions", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ subject: subject.name, level: subject.level, n: 5 }) });
+        const d = await r.json();
+        const qs: QQ[] = (d.questions || [])
+          .filter((q: { q?: string; options?: string[]; answer?: number }) => q && q.q && Array.isArray(q.options) && q.options.length === 4 && typeof q.answer === "number")
+          .map((q: { q: string; options: string[]; answer: number }) => ({ q: q.q, options: q.options, answer: q.answer, sig: sig("ai|" + q.q) }))
+          .filter((q: QQ) => !seen.has(q.sig));
+        if (alive && qs.length >= 4) setQuestions(qs.slice(0, 5));
+      } catch { /* usa el banco local */ }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const start = useRef(Date.now());
   const log = useRef<{ sig: string; correct: boolean }[]>([]);
   const [i, setI] = useState(0);

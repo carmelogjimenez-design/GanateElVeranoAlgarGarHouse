@@ -34,6 +34,8 @@ export async function enablePush(userId: string): Promise<{ ok: boolean; msg: st
 
 export function notifyParents(title: string, body: string) {
   try {
-    fetch("/api/notify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, body }) });
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (process.env.NEXT_PUBLIC_NOTIFY_KEY) headers["x-gev-key"] = process.env.NEXT_PUBLIC_NOTIFY_KEY;
+    fetch("/api/notify", { method: "POST", headers, body: JSON.stringify({ title, body }) });
   } catch { /* silencioso */ }
 }

@@ -31,7 +31,12 @@ export default function Page() {
     registerSW();
     sb.auth.getSession().then(({ data }) => setSession(data.session as Session));
     const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(s as Session));
-    return () => sub.subscription.unsubscribe();
+    // Actualización en vivo: realtime + sondeo de respaldo cada 40s
+    let t: ReturnType<typeof setTimeout>;
+    const schedule = () => { clearTimeout(t); t = setTimeout(() => refresh(), 1200); };
+    const ch = sb.channel("gev-live").on("postgres_changes", { event: "*", schema: "public" }, schedule).subscribe();
+    const poll = setInterval(() => refresh(), 40000);
+    return () => { sub.subscription.unsubscribe(); sb.removeChannel(ch); clearInterval(poll); clearTimeout(t); };
   }, []);
 
   useEffect(() => {

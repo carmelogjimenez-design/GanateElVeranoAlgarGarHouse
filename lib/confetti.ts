@@ -31,3 +31,21 @@ export function confetti(durationMs = 1400) {
   };
   requestAnimationFrame(tick);
 }
+
+export function chime() {
+  if (typeof window === "undefined") return;
+  try {
+    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ac = new Ctx();
+    [523.25, 659.25, 783.99].forEach((freq, i) => {
+      const o = ac.createOscillator(); const g = ac.createGain();
+      o.type = "triangle"; o.frequency.value = freq; o.connect(g); g.connect(ac.destination);
+      const t = ac.currentTime + i * 0.11;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+      o.start(t); o.stop(t + 0.26);
+    });
+    setTimeout(() => ac.close(), 1300);
+  } catch { /* sin sonido */ }
+}

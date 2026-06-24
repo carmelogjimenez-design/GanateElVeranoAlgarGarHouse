@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, Btn, Input } from "@/components/ui/atoms";
 import { sb } from "@/lib/supabase";
 import { enablePush } from "@/lib/push";
-import { Bell, Camera, UserCog } from "lucide-react";
+import { Bell, Camera, UserCog, Zap, X } from "lucide-react";
 import type { Ctx } from "@/lib/types";
 
 export default function AdminSettings({ ctx }: { ctx: Ctx }) {
@@ -24,6 +24,14 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
     await sb.from("profiles").update({ avatar_url: url }).eq("id", uid);
     setPhoto(url); flash("Foto de perfil actualizada");
   };
+  const [ev, setEv] = useState({ title: "¡Fin de semana de Doble XP!", multiplier: 2, hours: 48 });
+  const activeEvents = db.events.filter((e) => e.active && new Date(e.ends_at) > new Date());
+  const createEvent = async () => {
+    const ends = new Date(Date.now() + ev.hours * 3600 * 1000).toISOString();
+    const { error } = await sb.from("events").insert({ title: ev.title, kind: "double_xp", multiplier: ev.multiplier, ends_at: ends });
+    flash(error ? error.message : "¡Evento activado!"); refresh();
+  };
+  const stopEvent = async (id: string) => { await sb.from("events").update({ active: false }).eq("id", id); refresh(); };
   const s = db.settings;
   const [f, setF] = useState({
     team_goal: s?.team_goal ?? 200,
@@ -66,6 +74,23 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
         <Btn variant="dark" className="w-full flex items-center justify-center gap-2" onClick={activarPush}><Bell size={16} /> Activar avisos en este dispositivo</Btn>
         {pushMsg && <p className="text-sm font-semibold text-teal">{pushMsg}</p>}
       </Card>
+      <Card className="p-5 space-y-3">
+        <div className="flex items-center gap-2"><Zap size={16} className="text-amber-500" /><h3 className="font-bold text-navy tracking-tight">Eventos · Doble XP</h3></div>
+        <p className="text-sm text-slate-400 font-medium">Mientras esté activo, las misiones validadas multiplican sus puntos.</p>
+        {activeEvents.map((e) => (
+          <div key={e.id} className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+            <div className="text-sm"><span className="font-bold text-navy">{e.title}</span><span className="text-amber-600 font-semibold"> · x{e.multiplier}</span><div className="text-xs text-slate-400">hasta {new Date(e.ends_at).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div></div>
+            <button onClick={() => stopEvent(e.id)} className="text-slate-400 hover:text-red-400"><X size={18} /></button>
+          </div>
+        ))}
+        <Input value={ev.title} onChange={(e2) => setEv({ ...ev, title: e2.target.value })} placeholder="Nombre del evento" />
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="text-sm font-semibold text-navy">Multiplicador</label><Input type="number" value={ev.multiplier} onChange={(e2) => setEv({ ...ev, multiplier: +e2.target.value })} className="mt-1.5" /></div>
+          <div><label className="text-sm font-semibold text-navy">Duración (horas)</label><Input type="number" value={ev.hours} onChange={(e2) => setEv({ ...ev, hours: +e2.target.value })} className="mt-1.5" /></div>
+        </div>
+        <Btn variant="primary" className="w-full flex items-center justify-center gap-2" onClick={createEvent}><Zap size={16} /> Activar evento</Btn>
+      </Card>
+
       <Card className="p-5 space-y-3">
         <h3 className="font-bold text-navy tracking-tight">Reto de equipo</h3>
         <div><label className="text-sm font-semibold text-navy">Nombre del reto</label><Input value={f.challenge_label} onChange={(e) => setF({ ...f, challenge_label: e.target.value })} className="mt-1.5" /></div>

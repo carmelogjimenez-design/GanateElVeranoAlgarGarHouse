@@ -1,10 +1,10 @@
 "use client";
 import { useEffect } from "react";
-import { confetti } from "@/lib/confetti";
+import { confetti, chime } from "@/lib/confetti";
 
 export default function Celebration({ icon, title, subtitle, color = "#FF8A00", onClose }:
   { icon: React.ReactNode; title: string; subtitle?: string; color?: string; onClose: () => void }) {
-  useEffect(() => { confetti(); const t = setTimeout(onClose, 3200); return () => clearTimeout(t); }, [onClose]);
+  useEffect(() => { confetti(); chime(); const t = setTimeout(onClose, 3200); return () => clearTimeout(t); }, [onClose]);
   return (
     <div className="fixed inset-0 z-[80] bg-navy/40 backdrop-blur-sm flex items-center justify-center p-6" onClick={onClose}>
       <div className="bg-white rounded-3xl px-8 py-10 text-center animate-pop max-w-xs w-full" onClick={(e) => e.stopPropagation()}>

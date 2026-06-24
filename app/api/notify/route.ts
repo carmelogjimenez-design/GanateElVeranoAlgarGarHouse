@@ -10,6 +10,9 @@ const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://ruhqgglinqkwru
 const SERVICE = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
 export async function POST(req: Request) {
+  // Candado opcional: si defines NOTIFY_KEY, exige cabecera x-gev-key.
+  const guard = process.env.NOTIFY_KEY;
+  if (guard && req.headers.get("x-gev-key") !== guard) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   // Degradación elegante: si no hay claves configuradas, no hace nada (la app sigue funcionando).
   if (!PRIV || !SERVICE) return NextResponse.json({ skipped: true });
   try {
