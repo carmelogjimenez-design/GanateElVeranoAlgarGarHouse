@@ -3,9 +3,9 @@ import React from "react";
 import { initials } from "@/lib/game";
 
 /* ---------- Card ---------- */
-export const Card = ({ children, className = "", onClick }:
-  { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-  <div onClick={onClick} className={`bg-white border border-slate-200 rounded-2xl shadow-card ${onClick ? "cursor-pointer active:scale-[.99] transition" : ""} ${className}`}>{children}</div>
+export const Card = ({ children, className = "", onClick, style }:
+  { children: React.ReactNode; className?: string; onClick?: () => void; style?: React.CSSProperties }) => (
+  <div onClick={onClick} style={style} className={`bg-white border border-slate-200 rounded-2xl shadow-card ${onClick ? "cursor-pointer active:scale-[.99] transition" : ""} ${className}`}>{children}</div>
 );
 
 /* ---------- Button ---------- */
@@ -101,4 +101,16 @@ export function Modal({ children, onClose, title }: { children: React.ReactNode;
 /* ---------- Input ---------- */
 export const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
   <input {...props} className={`w-full border border-slate-200 bg-slate-50 rounded-xl px-4 py-3 text-[15px] outline-none focus:border-brand focus:bg-white transition ${props.className || ""}`} />
+);
+
+/* ---------- Stat (KPI) ---------- */
+export const Stat = ({ label, value, accent = "#FF8A00", icon }:
+  { label: string; value: React.ReactNode; accent?: string; icon?: React.ReactNode }) => (
+  <div className="bg-white border border-slate-200 rounded-2xl shadow-card p-4">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-semibold text-slate-400">{label}</span>
+      {icon && <span style={{ color: accent }}>{icon}</span>}
+    </div>
+    <div className="text-2xl font-extrabold text-navy tracking-tight mt-1">{value}</div>
+  </div>
 );

@@ -52,7 +52,7 @@ export default function Page() {
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen pb-10">
+    <>
       {screen === "lobby" && <Lobby ctx={ctx} onKid={(k) => setPinModal(k)} onLogin={() => setLoginOpen(true)} />}
       {screen === "kid" && kid && <KidApp ctx={ctx} />}
       {screen === "admin" && isAdmin && <AdminApp ctx={ctx} />}
@@ -64,10 +64,10 @@ export default function Page() {
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} />}
 
       {toast && (
-        <div className="fixed bottom-5 inset-x-0 flex justify-center z-50 px-4">
-          <div className="bg-slate-900 text-white font-bold px-4 py-3 rounded-2xl shadow-xl text-center">{toast}</div>
+        <div className="fixed bottom-24 md:bottom-6 inset-x-0 flex justify-center z-[60] px-4">
+          <div className="bg-navy text-white font-semibold px-4 py-3 rounded-2xl shadow-xl text-center">{toast}</div>
         </div>
       )}
-    </div>
+    </>
   );
 }
