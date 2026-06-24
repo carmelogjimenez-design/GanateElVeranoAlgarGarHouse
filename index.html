@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Gánate el Verano</title>
+<meta name="theme-color" content="#fb923c" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+  window.SUPABASE_URL = "https://ruhqgglinqkwruahvrrc.supabase.co";
+  window.SUPABASE_ANON_KEY = "sb_publishable_uHB7b3Z_uRXfRv2qGOhanQ_J89uqWcO";
+</script>
+<style>
+  body{font-family:ui-rounded,'Segoe UI',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  .card{border-radius:1.25rem}
+  ::-webkit-scrollbar{width:0}
+</style>
+</head>
+<body class="bg-orange-50 text-slate-800">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo } = React;
+const sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+/* ============== TONO GAMBERRO ============== */
+const COPY = {
+  lobbyTitles: ["Disfruta del verano… o quédate en casa.",
+    "El sofá no se va a recoger solo.",
+    "Hoy hay tareas. Mañana también. Sorpresa."],
+  kidWelcome: n => [
+    `¡Hola ${n}! El ranking no se sube solo.`,
+    `${n}, hay gloria pendiente de reclamar.`,
+    `${n}, tus hermanos ya están sumando. ¿Tú?`,
+    `Bienvenido ${n}. El verano premia a los valientes.`],
+  done: ["Marcada. Ahora reza para que papá o mamá la validen.",
+    "Hecho. La pelota está en su tejado.",
+    "Enviada a revisión. Cruza los dedos."],
+  noTasks: ["Hoy no tienes tareas. Sospechoso… disfruta mientras dure.",
+    "Cero tareas. ¿Soborno o suerte?"],
+  empty: "Aquí no hay nada todavía. Silencio incómodo.",
+};
+const pick = a => a[Math.floor(Math.random()*a.length)];
+
+/* ============== HELPERS ============== */
+async function loadAll(){
+  const tables = ["teams","kids","tasks","assignments","rewards","redemptions","gifts","subjects","study_sessions","point_events"];
+  const out = {};
+  await Promise.all(tables.map(async t=>{
+    const cols = t==="kids"
+      ? "id,name,emoji,color,team_id,total_points,study_enabled,active,created_at"
+      : "*";
+    const { data } = await sb.from(t).select(cols).order("created_at",{ascending:false});
+    out[t] = data || [];
+  }));
+  return out;
+}
+const rpc = (fn,args)=> sb.rpc(fn,args);
+const fmtMin = s => `${Math.floor((s||0)/60)} min`;
+const todayStr = ()=> new Date().toISOString().slice(0,10);
+const last7 = d => (Date.now() - new Date(d).getTime()) < 7*864e5;
+
+/* ============== UI ÁTOMOS ============== */
+const Chip = ({children,c="#6366f1"}) =>
+  <span className="text-xs font-bold px-2.5 py-1 rounded-full text-white" style={{background:c}}>{children}</span>;
+
+const Bar = ({v,max,c="#fb923c"}) =>
+  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+    <div className="h-3 rounded-full transition-all" style={{width:`${max?Math.min(100,v/max*100):0}%`,background:c}}/>
+  </div>;
+
+const Btn = ({children,onClick,c="bg-orange-500",className=""}) =>
+  <button onClick={onClick} className={`${c} text-white font-extrabold rounded-2xl px-4 py-3 active:scale-95 transition ${className}`}>{children}</button>;
+
+function Modal({children,onClose,title}){
+  return <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-3" onClick={onClose}>
+    <div className="bg-white w-full max-w-md card p-5 max-h-[88vh] overflow-y-auto" onClick={e=>e.stopPropagation()}>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-black text-xl">{title}</h3>
+        <button onClick={onClose} className="text-2xl leading-none text-slate-400">×</button>
+      </div>
+      {children}
+    </div>
+  </div>;
+}
+
+/* ============== APP ============== */
+function App(){
+  const [screen,setScreen] = useState("lobby");      // lobby | kid | admin
+  const [db,setDb] = useState(null);
+  const [session,setSession] = useState(null);
+  const [kid,setKid] = useState(null);               // hijo activo (modo hijo)
+  const [pinModal,setPinModal] = useState(null);     // kid pendiente de PIN
+  const [loginOpen,setLoginOpen] = useState(false);
+  const [toast,setToast] = useState("");
+
+  const refresh = async()=> setDb(await loadAll());
+  const flash = m => { setToast(m); setTimeout(()=>setToast(""),2600); };
+
+  useEffect(()=>{ refresh(); 
+    sb.auth.getSession().then(({data})=> setSession(data.session));
+    const {data:sub} = sb.auth.onAuthStateChange((_e,s)=> setSession(s));
+    return ()=> sub.subscription.unsubscribe();
+  },[]);
+  useEffect(()=>{ if(session) setScreen("admin"); },[session]);
+
+  if(!window.SUPABASE_URL || window.SUPABASE_URL.includes("TU-PROYECTO"))
+    return <div className="p-8 text-center font-bold">Configura <code>config.js</code> con tu URL y ANON KEY de Supabase 🛠️</div>;
+  if(!db) return <div className="p-10 text-center text-2xl">Cargando el cuartel general… 🏠</div>;
+
+  const ctx = { db, refresh, flash, setScreen, setKid, kid, session,
+    logout: async()=>{ await sb.auth.signOut(); setSession(null); setScreen("lobby"); } };
+
+  return <div className="max-w-md mx-auto min-h-screen pb-10">
+    {screen==="lobby" && <Lobby ctx={ctx} onKid={k=>setPinModal(k)} onLogin={()=>setLoginOpen(true)} />}
+    {screen==="kid"   && kid && <KidApp ctx={ctx} />}
+    {screen==="admin" && <AdminApp ctx={ctx} />}
+
+    {pinModal && <PinModal kid={pinModal} onClose={()=>setPinModal(null)}
+      onOk={(p)=>{ setKid({...pinModal,pin:p}); setPinModal(null); setScreen("kid"); }} />}
+    {loginOpen && <LoginModal onClose={()=>setLoginOpen(false)} flash={flash} />}
+
+    {toast && <div className="fixed bottom-5 inset-x-0 flex justify-center z-50 px-4">
+      <div className="bg-slate-900 text-white font-bold px-4 py-3 card shadow-xl text-center">{toast}</div></div>}
+  </div>;
+}
+
+/* ============== LOBBY ============== */
+function Lobby({ctx,onKid,onLogin}){
+  const {db} = ctx;
+  const ranking = [...db.kids].sort((a,b)=>b.total_points-a.total_points);
+  const max = ranking[0]?.total_points || 1;
+  const medals = ["🥇","🥈","🥉"];
+  const teamScores = db.teams.map(t=>({...t,
+    pts: db.kids.filter(k=>k.team_id===t.id).reduce((s,k)=>s+k.total_points,0)})).sort((a,b)=>b.pts-a.pts);
+  const tMax = teamScores[0]?.pts || 1;
+
+  return <div className="px-4 pt-7">
+    <div className="text-center mb-5">
+      <div className="text-5xl mb-1">☀️🏠</div>
+      <h1 className="text-3xl font-black text-orange-600">Gánate el Verano</h1>
+      <p className="text-slate-500 font-semibold text-sm mt-1">{pick(COPY.lobbyTitles)}</p>
+    </div>
+
+    <div className="bg-white card p-4 mb-4 shadow-sm">
+      <h2 className="font-black text-lg mb-3">🏆 Ranking familiar</h2>
+      {ranking.map((k,i)=>
+        <div key={k.id} className="flex items-center gap-3 py-1.5">
+          <span className="w-6 text-center font-black">{medals[i]||i+1}</span>
+          <span className="text-2xl">{k.emoji}</span>
+          <div className="flex-1">
+            <div className="flex justify-between text-sm font-bold"><span>{k.name}</span><span>{k.total_points} pts</span></div>
+            <Bar v={k.total_points} max={max} c={k.color}/>
+          </div>
+        </div>)}
+    </div>
+
+    <div className="bg-white card p-4 mb-5 shadow-sm">
+      <h2 className="font-black text-lg mb-3">⚔️ Equipos</h2>
+      {teamScores.map(t=>
+        <div key={t.id} className="py-1.5">
+          <div className="flex justify-between text-sm font-bold"><span>{t.emoji} {t.name}</span><span>{t.pts} pts</span></div>
+          <Bar v={t.pts} max={tMax} c={t.color}/>
+        </div>)}
+    </div>
+
+    <h2 className="font-black text-lg mb-2">¿Quién juega? 🎮</h2>
+    <div className="grid grid-cols-3 gap-3 mb-6">
+      {db.kids.map(k=>
+        <button key={k.id} onClick={()=>onKid(k)}
+          className="bg-white card p-3 flex flex-col items-center active:scale-95 transition shadow-sm">
+          <span className="text-3xl">{k.emoji}</span>
+          <span className="font-bold text-sm mt-1 truncate w-full text-center">{k.name}</span>
+          <span className="text-xs font-bold" style={{color:k.color}}>{k.total_points} pts</span>
+        </button>)}
+    </div>
+
+    <Btn c="bg-slate-800" className="w-full" onClick={onLogin}>👑 Soy Tamar / Ricardo</Btn>
+  </div>;
+}
+
+function PinModal({kid,onClose,onOk}){
+  const [pin,setPin] = useState(""); const [err,setErr] = useState("");
+  const check = async()=>{
+    const {data} = await rpc("kid_pin_ok",{p_kid:kid.id,p_pin:pin});
+    if(data) onOk(pin); else setErr("PIN incorrecto. Buen intento.");
+  };
+  return <Modal title={`${kid.emoji} ${kid.name}`} onClose={onClose}>
+    <p className="text-slate-500 font-semibold mb-3 text-sm">Mete tu PIN de 4 dígitos.</p>
+    <input value={pin} onChange={e=>setPin(e.target.value)} inputMode="numeric" maxLength={4}
+      className="w-full text-center text-3xl tracking-[.5em] font-black border-2 rounded-2xl py-3 mb-2"/>
+    {err && <p className="text-red-500 font-bold text-sm mb-2">{err}</p>}
+    <Btn className="w-full" onClick={check}>Entrar</Btn>
+  </Modal>;
+}
+
+function LoginModal({onClose,flash}){
+  const [email,setEmail]=useState(""); const [pass,setPass]=useState(""); const [err,setErr]=useState("");
+  const go = async()=>{
+    const {error} = await sb.auth.signInWithPassword({email,password:pass});
+    if(error) setErr(error.message); else onClose();
+  };
+  return <Modal title="👑 Panel de padres" onClose={onClose}>
+    <input placeholder="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full border-2 rounded-2xl px-4 py-3 mb-2"/>
+    <input placeholder="contraseña" type="password" value={pass} onChange={e=>setPass(e.target.value)} className="w-full border-2 rounded-2xl px-4 py-3 mb-2"/>
+    {err && <p className="text-red-500 font-bold text-sm mb-2">{err}</p>}
+    <Btn c="bg-slate-800" className="w-full" onClick={go}>Entrar</Btn>
+  </Modal>;
+}
+
+/* ============== APP HIJO ============== */
+function KidApp({ctx}){
+  const {db,kid,refresh,flash,setScreen} = ctx;
+  const me = db.kids.find(k=>k.id===kid.id) || kid;
+  const [tab,setTab] = useState("hoy");
+  const ranking = [...db.kids].sort((a,b)=>b.total_points-a.total_points);
+  const rank = ranking.findIndex(k=>k.id===me.id)+1;
+  const myAsg = db.assignments.filter(a=>a.kid_id===me.id);
+  const streak = new Set(myAsg.filter(a=>a.status==="approved"&&a.validated_at)
+    .map(a=>a.validated_at.slice(0,10))).size;
+
+  const tabs = [["hoy","✅ Hoy"],["premios","🎁 Premios"],["mercado","🤝 Mercado"]];
+  if(me.study_enabled) tabs.push(["estudio","📚 Estudio"]);
+  tabs.push(["rank","🏆 Ranking"]);
+
+  return <div>
+    <div className="px-4 pt-6 pb-4 text-white" style={{background:me.color}}>
+      <div className="flex justify-between items-center">
+        <button onClick={()=>setScreen("lobby")} className="font-bold">‹ Salir</button>
+        <Chip c="rgba(0,0,0,.25)">#{rank} del ranking</Chip>
+      </div>
+      <div className="flex items-center gap-3 mt-3">
+        <span className="text-5xl">{me.emoji}</span>
+        <div>
+          <div className="text-2xl font-black">{me.name}</div>
+          <div className="font-bold opacity-90">{me.total_points} pts · 🔥 {streak} días</div>
+        </div>
+      </div>
+      <p className="mt-3 font-semibold text-sm bg-black/15 rounded-xl px-3 py-2">{pick(COPY.kidWelcome(me.name))}</p>
+    </div>
+
+    <div className="flex gap-2 overflow-x-auto px-4 py-3">
+      {tabs.map(([k,l])=>
+        <button key={k} onClick={()=>setTab(k)}
+          className={`whitespace-nowrap px-3 py-2 rounded-2xl font-bold text-sm ${tab===k?"bg-slate-800 text-white":"bg-white"}`}>{l}</button>)}
+    </div>
+
+    <div className="px-4">
+      {tab==="hoy" && <KidTasks ctx={ctx} me={me} asg={myAsg}/>}
+      {tab==="premios" && <KidRewards ctx={ctx} me={me}/>}
+      {tab==="mercado" && <KidMarket ctx={ctx} me={me}/>}
+      {tab==="estudio" && <KidStudy ctx={ctx} me={me}/>}
+      {tab==="rank" && <RankingList db={db} highlight={me.id}/>}
+    </div>
+  </div>;
+}
+
+function KidTasks({ctx,me,asg}){
+  const {flash,refresh,kid} = ctx;
+  const pending = asg.filter(a=>["todo","rejected"].includes(a.status));
+  const wait = asg.filter(a=>a.status==="pending");
+  const done = asg.filter(a=>a.status==="approved");
+  const mark = async a=>{
+    const {error} = await rpc("mark_done",{p_assignment:a.id,p_kid:me.id,p_pin:kid.pin});
+    if(error) flash(error.message); else { flash(pick(COPY.done)); refresh(); }
+  };
+  return <div className="space-y-3 pb-6">
+    {pending.length===0 && <p className="text-slate-400 font-semibold text-center py-6">{pick(COPY.noTasks)}</p>}
+    {pending.map(a=>
+      <div key={a.id} className="bg-white card p-4 shadow-sm">
+        <div className="flex justify-between"><span className="font-black">{a.title}</span><Chip>{a.points} pts</Chip></div>
+        {a.status==="rejected" && <p className="text-red-500 text-xs font-bold mt-1">Rechazada antes. A la segunda va la vencida.</p>}
+        <Btn className="w-full mt-3" onClick={()=>mark(a)}>Marcar como hecha</Btn>
+      </div>)}
+    {wait.map(a=>
+      <div key={a.id} className="bg-amber-100 card p-3 flex justify-between items-center">
+        <span className="font-bold text-amber-800">⏳ {a.title}</span><span className="text-xs font-bold text-amber-700">En revisión</span></div>)}
+    {done.map(a=>
+      <div key={a.id} className="bg-green-100 card p-3 flex justify-between items-center">
+        <span className="font-bold text-green-800">✅ {a.title}</span><span className="text-xs font-bold text-green-700">+{a.points}</span></div>)}
+  </div>;
+}
+
+function KidRewards({ctx,me}){
+  const {db,flash,refresh,kid} = ctx;
+  const ask = async r=>{
+    const {error} = await rpc("request_redemption",{p_kid:me.id,p_pin:kid.pin,p_reward:r.id});
+    flash(error? error.message : "Canje solicitado. Ahora a convencer a los jefes.");
+    if(!error) refresh();
+  };
+  return <div className="grid grid-cols-2 gap-3 pb-6">
+    {db.rewards.filter(r=>r.active).map(r=>{
+      const can = me.total_points>=r.cost;
+      return <div key={r.id} className="bg-white card p-4 shadow-sm flex flex-col">
+        <span className="text-3xl">{r.emoji}</span>
+        <span className="font-black mt-1">{r.title}</span>
+        <span className="text-xs text-slate-500 flex-1">{r.description}</span>
+        <Btn c={can?"bg-orange-500":"bg-slate-300"} className="w-full mt-2 text-sm" onClick={()=>can&&ask(r)}>
+          {r.cost} pts {can?"":"🔒"}</Btn>
+      </div>;})}
+  </div>;
+}
+
+function KidMarket({ctx,me}){
+  const {db,flash,refresh,kid} = ctx;
+  const [to,setTo]=useState(""); const [pts,setPts]=useState(""); const [why,setWhy]=useState("");
+  const send = async()=>{
+    const {error} = await rpc("request_gift",{p_from:me.id,p_pin:kid.pin,p_to:to,p_points:+pts,p_reason:why});
+    if(error) flash(error.message); else { flash("Oferta enviada. Los padres deben dar el OK."); setPts("");setWhy(""); refresh(); }
+  };
+  return <div className="pb-6">
+    <div className="bg-white card p-4 shadow-sm space-y-2">
+      <p className="font-bold text-sm text-slate-500">Regala / ofrece puntos a un hermano (p. ej. "te pago 5 por mi baño").</p>
+      <select value={to} onChange={e=>setTo(e.target.value)} className="w-full border-2 rounded-2xl px-3 py-3 font-bold">
+        <option value="">¿A quién?</option>
+        {db.kids.filter(k=>k.id!==me.id).map(k=><option key={k.id} value={k.id}>{k.emoji} {k.name}</option>)}
+      </select>
+      <input value={pts} onChange={e=>setPts(e.target.value)} inputMode="numeric" placeholder="Puntos" className="w-full border-2 rounded-2xl px-3 py-3"/>
+      <input value={why} onChange={e=>setWhy(e.target.value)} placeholder="Motivo (opcional)" className="w-full border-2 rounded-2xl px-3 py-3"/>
+      <Btn className="w-full" onClick={()=> to&&pts&&send()}>Enviar oferta</Btn>
+    </div>
+    <h3 className="font-black mt-4 mb-2">Tus movimientos</h3>
+    {db.gifts.filter(g=>g.from_kid===me.id||g.to_kid===me.id).map(g=>{
+      const out = g.from_kid===me.id;
+      const other = db.kids.find(k=>k.id===(out?g.to_kid:g.from_kid));
+      return <div key={g.id} className="bg-white card p-3 mb-2 flex justify-between text-sm font-bold">
+        <span>{out?"➡️ Para":"⬅️ De"} {other?.name}</span>
+        <span>{out?"-":"+"}{g.points} · {g.status}</span></div>;})}
+  </div>;
+}
+
+function KidStudy({ctx,me}){
+  const {db,flash,refresh,kid} = ctx;
+  const mine = db.subjects.filter(s=>s.kid_id===me.id&&s.active);
+  const [run,setRun] = useState(null);  // {id,start}
+  const [sec,setSec] = useState(0);
+  useEffect(()=>{ if(!run) return; const t=setInterval(()=>setSec(Math.floor((Date.now()-run.start)/1000)),1000); return ()=>clearInterval(t); },[run]);
+  const stop = async()=>{
+    await rpc("log_study",{p_kid:me.id,p_pin:kid.pin,p_subject:run.id,p_seconds:sec});
+    flash(`Has estudiado ${Math.floor(sec/60)} min. La ciencia sigue sin explicarlo.`);
+    setRun(null); setSec(0); refresh();
+  };
+  const weekSec = id => db.study_sessions.filter(s=>s.subject_id===id&&last7(s.created_at)).reduce((a,b)=>a+b.seconds,0);
+  return <div className="space-y-3 pb-6">
+    {mine.length===0 && <p className="text-slate-400 font-semibold text-center py-6">Sin asignaturas todavía. Disfrútalo.</p>}
+    {mine.map(s=>
+      <div key={s.id} className="bg-white card p-4 shadow-sm">
+        <div className="flex justify-between"><span className="font-black">{s.name}</span><Chip c="#8b5cf6">{s.level}</Chip></div>
+        <div className="text-xs text-slate-500 mt-1">Total {fmtMin(s.total_seconds)} · Semana {fmtMin(weekSec(s.id))}</div>
+        {run?.id===s.id
+          ? <div className="mt-3 flex items-center gap-3">
+              <span className="text-2xl font-black tabular-nums">{String(Math.floor(sec/60)).padStart(2,"0")}:{String(sec%60).padStart(2,"0")}</span>
+              <Btn c="bg-red-500" className="flex-1" onClick={stop}>⏹ Finalizar</Btn></div>
+          : <Btn c="bg-violet-500" className="w-full mt-3" onClick={()=>{setRun({id:s.id,start:Date.now()});setSec(0);}}>▶ Empezar a estudiar</Btn>}
+      </div>)}
+  </div>;
+}
+
+function RankingList({db,highlight}){
+  const ranking = [...db.kids].sort((a,b)=>b.total_points-a.total_points);
+  const max = ranking[0]?.total_points||1; const medals=["🥇","🥈","🥉"];
+  return <div className="bg-white card p-4 shadow-sm mb-6">
+    {ranking.map((k,i)=>
+      <div key={k.id} className={`flex items-center gap-3 py-1.5 ${k.id===highlight?"bg-orange-50 rounded-xl px-2":""}`}>
+        <span className="w-6 text-center font-black">{medals[i]||i+1}</span>
+        <span className="text-2xl">{k.emoji}</span>
+        <div className="flex-1">
+          <div className="flex justify-between text-sm font-bold"><span>{k.name}</span><span>{k.total_points}</span></div>
+          <Bar v={k.total_points} max={max} c={k.color}/>
+        </div></div>)}
+  </div>;
+}
+
+/* ============== APP PADRES ============== */
+function AdminApp({ctx}){
+  const {db,logout} = ctx;
+  const [tab,setTab] = useState("validar");
+  const pend = db.assignments.filter(a=>a.status==="pending").length
+    + db.redemptions.filter(r=>r.status==="pending").length
+    + db.gifts.filter(g=>g.status==="pending").length;
+  const tabs = [["validar",`✅ Validar${pend?" ("+pend+")":""}`],["tareas","📋 Tareas"],["hijos","👨‍👩‍👧 Hijos"],["premios","🎁 Premios"],["rank","📊 Stats"]];
+  return <div>
+    <div className="bg-slate-900 text-white px-4 pt-6 pb-4 flex justify-between items-center">
+      <div><div className="font-black text-xl">👑 Panel de padres</div><div className="text-xs opacity-70">Tamar & Ricardo</div></div>
+      <button onClick={logout} className="font-bold text-sm bg-white/15 px-3 py-2 rounded-xl">Salir</button>
+    </div>
+    <div className="flex gap-2 overflow-x-auto px-4 py-3 bg-white sticky top-0 z-10">
+      {tabs.map(([k,l])=><button key={k} onClick={()=>setTab(k)}
+        className={`whitespace-nowrap px-3 py-2 rounded-2xl font-bold text-sm ${tab===k?"bg-orange-500 text-white":"bg-slate-100"}`}>{l}</button>)}
+    </div>
+    <div className="px-4 pt-1">
+      {tab==="validar" && <AdminValidate ctx={ctx}/>}
+      {tab==="tareas" && <AdminTasks ctx={ctx}/>}
+      {tab==="hijos" && <AdminKids ctx={ctx}/>}
+      {tab==="premios" && <AdminRewards ctx={ctx}/>}
+      {tab==="rank" && <AdminStats ctx={ctx}/>}
+    </div>
+  </div>;
+}
+
+function AdminValidate({ctx}){
+  const {db,refresh,flash} = ctx;
+  const name = id => db.kids.find(k=>k.id===id)?.name || "?";
+  const asg = db.assignments.filter(a=>a.status==="pending");
+  const red = db.redemptions.filter(r=>r.status==="pending");
+  const gif = db.gifts.filter(g=>g.status==="pending");
+  const call = async(fn,args,msg)=>{ const {error}=await rpc(fn,args); flash(error?error.message:msg); refresh(); };
+  if(!asg.length&&!red.length&&!gif.length)
+    return <p className="text-slate-400 font-semibold text-center py-10">Nada pendiente. Reina la paz… por ahora. 🕊️</p>;
+  return <div className="space-y-4 pb-6">
+    {asg.length>0 && <Section t="Tareas para revisar">{asg.map(a=>
+      <div key={a.id} className="bg-white card p-4 shadow-sm">
+        <div className="flex justify-between"><span className="font-black">{a.title}</span><Chip>{a.points} pts</Chip></div>
+        <p className="text-sm text-slate-500">{name(a.kid_id)}{a.note?` · "${a.note}"`:""}</p>
+        <div className="flex gap-2 mt-3">
+          <Btn c="bg-green-500" className="flex-1" onClick={()=>call("approve_assignment",{p_assignment:a.id},"Validada. +"+a.points)}>Validar</Btn>
+          <Btn c="bg-red-500" className="flex-1" onClick={()=>{const p=prompt("Penalización en puntos (0 = ninguna):","0");
+            call("reject_assignment",{p_assignment:a.id,p_penalty:+(p||0)},"Rechazada. Recoger no es esconder.");}}>Rechazar</Btn>
+        </div></div>)}</Section>}
+    {red.length>0 && <Section t="Canjes de premios">{red.map(r=>
+      <div key={r.id} className="bg-white card p-4 shadow-sm">
+        <div className="flex justify-between"><span className="font-black">{r.title}</span><Chip c="#ec4899">{r.cost} pts</Chip></div>
+        <p className="text-sm text-slate-500">{name(r.kid_id)}</p>
+        <div className="flex gap-2 mt-3">
+          <Btn c="bg-green-500" className="flex-1" onClick={()=>call("approve_redemption",{p_id:r.id},"Canje aprobado 🎁")}>Aprobar</Btn>
+          <Btn c="bg-slate-400" className="flex-1" onClick={()=>call("reject_redemption",{p_id:r.id},"Canje rechazado")}>Rechazar</Btn>
+        </div></div>)}</Section>}
+    {gif.length>0 && <Section t="Mercado de puntos">{gif.map(g=>
+      <div key={g.id} className="bg-white card p-4 shadow-sm">
+        <p className="font-bold">{name(g.from_kid)} ➡️ {name(g.to_kid)} · {g.points} pts</p>
+        <p className="text-sm text-slate-500">{g.reason}</p>
+        <div className="flex gap-2 mt-3">
+          <Btn c="bg-green-500" className="flex-1" onClick={()=>call("approve_gift",{p_id:g.id},"Transferencia hecha 🤝")}>Aprobar</Btn>
+          <Btn c="bg-slate-400" className="flex-1" onClick={()=>call("reject_gift",{p_id:g.id},"Transferencia rechazada")}>Rechazar</Btn>
+        </div></div>)}</Section>}
+  </div>;
+}
+const Section = ({t,children}) => <div><h3 className="font-black mb-2">{t}</h3><div className="space-y-3">{children}</div></div>;
+
+function AdminTasks({ctx}){
+  const {db,refresh,flash} = ctx;
+  const [f,setF] = useState({title:"",description:"",points:3,difficulty:"media",frequency:"diaria"});
+  const create = async()=>{
+    if(!f.title) return;
+    const {error} = await sb.from("tasks").insert(f);
+    flash(error?error.message:"Tarea creada"); if(!error){setF({...f,title:"",description:""});refresh();}
+  };
+  const [asgTask,setAsgTask] = useState(null);
+  return <div className="pb-6">
+    <div className="bg-white card p-4 shadow-sm space-y-2">
+      <h3 className="font-black">Nueva tarea</h3>
+      <input value={f.title} onChange={e=>setF({...f,title:e.target.value})} placeholder="Título" className="w-full border-2 rounded-2xl px-3 py-2.5"/>
+      <input value={f.description} onChange={e=>setF({...f,description:e.target.value})} placeholder="Descripción / pulla" className="w-full border-2 rounded-2xl px-3 py-2.5"/>
+      <div className="flex gap-2">
+        <input type="number" value={f.points} onChange={e=>setF({...f,points:+e.target.value})} className="w-20 border-2 rounded-2xl px-3 py-2.5" placeholder="pts"/>
+        <select value={f.difficulty} onChange={e=>setF({...f,difficulty:e.target.value})} className="flex-1 border-2 rounded-2xl px-2 py-2.5">
+          <option value="facil">Fácil</option><option value="media">Media</option><option value="dificil">Difícil</option></select>
+        <select value={f.frequency} onChange={e=>setF({...f,frequency:e.target.value})} className="flex-1 border-2 rounded-2xl px-2 py-2.5">
+          {["diaria","2/semana","semanal","quincenal","mensual","personalizada"].map(x=><option key={x}>{x}</option>)}</select>
+      </div>
+      <Btn className="w-full" onClick={create}>Crear tarea</Btn>
+    </div>
+    <h3 className="font-black mt-4 mb-2">Tareas ({db.tasks.length})</h3>
+    {db.tasks.map(t=>
+      <div key={t.id} className="bg-white card p-3 mb-2 flex justify-between items-center shadow-sm">
+        <div><div className="font-bold">{t.title}</div><div className="text-xs text-slate-500">{t.frequency} · {t.points} pts · {t.difficulty}</div></div>
+        <div className="flex gap-2">
+          <Btn c="bg-orange-500" className="text-sm px-3 py-2" onClick={()=>setAsgTask(t)}>Asignar</Btn>
+          <button onClick={async()=>{await sb.from("tasks").delete().eq("id",t.id);refresh();}} className="text-red-400 font-black px-2">🗑</button>
+        </div></div>)}
+    {asgTask && <AssignModal ctx={ctx} task={asgTask} onClose={()=>setAsgTask(null)}/>}
+  </div>;
+}
+
+function AssignModal({ctx,task,onClose}){
+  const {db,refresh,flash} = ctx;
+  const [sel,setSel] = useState([]); const [due,setDue] = useState(todayStr());
+  const toggle = id => setSel(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const assign = async()=>{
+    const rows = sel.map(kid_id=>({task_id:task.id,kid_id,title:task.title,points:task.points,
+      photo_required:task.photo_required,due_date:due,team_id:db.kids.find(k=>k.id===kid_id)?.team_id}));
+    const {error} = await sb.from("assignments").insert(rows);
+    flash(error?error.message:`Asignada a ${rows.length} hijo(s)`); if(!error){refresh();onClose();}
+  };
+  return <Modal title={`Asignar: ${task.title}`} onClose={onClose}>
+    <input type="date" value={due} onChange={e=>setDue(e.target.value)} className="w-full border-2 rounded-2xl px-3 py-2.5 mb-3"/>
+    <div className="flex flex-wrap gap-2 mb-3">
+      {db.teams.map(t=><button key={t.id} onClick={()=>{
+        const ids=db.kids.filter(k=>k.team_id===t.id).map(k=>k.id);
+        setSel(s=>[...new Set([...s,...ids])]);}} className="text-xs font-bold px-2 py-1 rounded-full text-white" style={{background:t.color}}>+ {t.name}</button>)}
+    </div>
+    <div className="grid grid-cols-3 gap-2 mb-3">
+      {db.kids.map(k=><button key={k.id} onClick={()=>toggle(k.id)}
+        className={`card p-2 text-sm font-bold border-2 ${sel.includes(k.id)?"border-orange-500 bg-orange-50":"border-transparent bg-slate-100"}`}>
+        {k.emoji} {k.name}</button>)}
+    </div>
+    <Btn className="w-full" onClick={()=>sel.length&&assign()}>Asignar a {sel.length}</Btn>
+  </Modal>;
+}
+
+function AdminKids({ctx}){
+  const {db,refresh,flash} = ctx;
+  const [edit,setEdit] = useState(null);
+  const addTeam = async()=>{ const n=prompt("Nombre del equipo:"); if(n){await sb.from("teams").insert({name:n});refresh();} };
+  const addKid = async()=>{ const n=prompt("Nombre del hijo:"); if(n){await sb.from("kids").insert({name:n,pin:"1111"});flash("Creado con PIN 1111");refresh();} };
+  return <div className="pb-6">
+    <div className="flex gap-2 mb-3">
+      <Btn className="flex-1" onClick={addKid}>+ Hijo</Btn>
+      <Btn c="bg-slate-700" className="flex-1" onClick={addTeam}>+ Equipo</Btn>
+    </div>
+    {db.kids.map(k=>{
+      const team = db.teams.find(t=>t.id===k.team_id);
+      return <div key={k.id} className="bg-white card p-3 mb-2 shadow-sm">
+        <div className="flex justify-between items-center">
+          <div className="font-bold">{k.emoji} {k.name} <span className="text-xs text-slate-400">· {team?.name||"sin equipo"} · {k.total_points} pts</span></div>
+          <button onClick={()=>setEdit(k)} className="text-orange-500 font-bold text-sm">Editar</button>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
+          <label className="text-sm font-bold">📚 Estudio</label>
+          <input type="checkbox" checked={k.study_enabled} onChange={async e=>{await sb.from("kids").update({study_enabled:e.target.checked}).eq("id",k.id);refresh();}}/>
+        </div>
+      </div>;})}
+    {edit && <KidEditModal ctx={ctx} kid={edit} onClose={()=>setEdit(null)}/>}
+  </div>;
+}
+
+function KidEditModal({ctx,kid,onClose}){
+  const {db,refresh,flash} = ctx;
+  const [f,setF] = useState({name:kid.name,emoji:kid.emoji,pin:"",color:kid.color,team_id:kid.team_id||""});
+  const [subj,setSubj] = useState({name:"Matemáticas",level:"ESO"});
+  const mySubj = db.subjects.filter(s=>s.kid_id===kid.id);
+  const save = async()=>{
+    const patch = {name:f.name,emoji:f.emoji,color:f.color,team_id:f.team_id||null};
+    if(f.pin && f.pin.length===4) patch.pin = f.pin;
+    await sb.from("kids").update(patch).eq("id",kid.id); flash("Guardado"); refresh(); onClose();
+  };
+  const addSubj = async()=>{ await sb.from("subjects").insert({kid_id:kid.id,...subj}); refresh(); };
+  return <Modal title={`Editar ${kid.name}`} onClose={onClose}>
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input value={f.emoji} onChange={e=>setF({...f,emoji:e.target.value})} className="w-16 text-center text-2xl border-2 rounded-2xl"/>
+        <input value={f.name} onChange={e=>setF({...f,name:e.target.value})} className="flex-1 border-2 rounded-2xl px-3 py-2.5"/>
+      </div>
+      <label className="text-sm font-bold">PIN nuevo (4 dígitos · vacío = no cambiar)</label>
+      <input value={f.pin} maxLength={4} inputMode="numeric" placeholder="••••" onChange={e=>setF({...f,pin:e.target.value})} className="w-full border-2 rounded-2xl px-3 py-2.5"/>
+      <label className="text-sm font-bold">Equipo</label>
+      <select value={f.team_id} onChange={e=>setF({...f,team_id:e.target.value})} className="w-full border-2 rounded-2xl px-3 py-2.5">
+        <option value="">Sin equipo</option>{db.teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select>
+      <Btn className="w-full" onClick={save}>Guardar</Btn>
+    </div>
+    {kid.study_enabled && <div className="mt-4 border-t pt-3">
+      <h4 className="font-black mb-2">📚 Asignaturas</h4>
+      {mySubj.map(s=><div key={s.id} className="flex justify-between text-sm font-bold py-1">
+        <span>{s.name} · {s.level}</span>
+        <button onClick={async()=>{await sb.from("subjects").delete().eq("id",s.id);refresh();}} className="text-red-400">🗑</button></div>)}
+      <div className="flex gap-2 mt-2">
+        <input value={subj.name} onChange={e=>setSubj({...subj,name:e.target.value})} placeholder="Asignatura" className="flex-1 border-2 rounded-2xl px-3 py-2"/>
+        <select value={subj.level} onChange={e=>setSubj({...subj,level:e.target.value})} className="border-2 rounded-2xl px-2">
+          {["Primaria","1º ESO","2º ESO","3º ESO","4º ESO","Bachillerato"].map(x=><option key={x}>{x}</option>)}</select>
+        <Btn className="px-3" onClick={addSubj}>+</Btn>
+      </div>
+    </div>}
+  </Modal>;
+}
+
+function AdminRewards({ctx}){
+  const {db,refresh,flash} = ctx;
+  const [f,setF] = useState({title:"",description:"",emoji:"🎁",cost:10});
+  const create = async()=>{ if(!f.title)return; await sb.from("rewards").insert(f); flash("Premio creado"); setF({...f,title:"",description:""}); refresh(); };
+  return <div className="pb-6">
+    <div className="bg-white card p-4 shadow-sm space-y-2">
+      <h3 className="font-black">Nuevo premio</h3>
+      <div className="flex gap-2">
+        <input value={f.emoji} onChange={e=>setF({...f,emoji:e.target.value})} className="w-14 text-center text-2xl border-2 rounded-2xl"/>
+        <input value={f.title} onChange={e=>setF({...f,title:e.target.value})} placeholder="Título" className="flex-1 border-2 rounded-2xl px-3 py-2.5"/>
+        <input type="number" value={f.cost} onChange={e=>setF({...f,cost:+e.target.value})} className="w-20 border-2 rounded-2xl px-3 py-2.5"/>
+      </div>
+      <input value={f.description} onChange={e=>setF({...f,description:e.target.value})} placeholder="Descripción" className="w-full border-2 rounded-2xl px-3 py-2.5"/>
+      <Btn className="w-full" onClick={create}>Crear premio</Btn>
+    </div>
+    <div className="grid grid-cols-2 gap-3 mt-4">
+      {db.rewards.map(r=><div key={r.id} className="bg-white card p-3 shadow-sm">
+        <div className="text-2xl">{r.emoji}</div><div className="font-bold">{r.title}</div>
+        <div className="text-xs text-slate-500">{r.cost} pts</div>
+        <button onClick={async()=>{await sb.from("rewards").delete().eq("id",r.id);refresh();}} className="text-red-400 text-sm font-bold mt-1">Eliminar</button>
+      </div>)}
+    </div>
+  </div>;
+}
+
+function AdminStats({ctx}){
+  const {db,refresh,flash} = ctx;
+  const ref = useRef(); const chart = useRef();
+  const ranking = [...db.kids].sort((a,b)=>b.total_points-a.total_points);
+  const weekly = db.kids.map(k=>({k, w: db.point_events?db.point_events.filter(e=>e.kid_id===k.id&&last7(e.created_at)).reduce((a,b)=>a+b.delta,0):0}));
+  // hijo de la semana: sumamos point_events de últimos 7 días (si no se cargan, usamos approved assignments)
+  const weekFromAsg = k => db.assignments.filter(a=>a.kid_id===k.id&&a.status==="approved"&&a.validated_at&&last7(a.validated_at)).reduce((s,a)=>s+a.points,0);
+  const star = [...db.kids].map(k=>({k,w:weekFromAsg(k)})).sort((a,b)=>b.w-a.w)[0];
+  useEffect(()=>{
+    if(chart.current) chart.current.destroy();
+    chart.current = new Chart(ref.current,{type:"bar",
+      data:{labels:ranking.map(k=>k.name),datasets:[{data:ranking.map(k=>k.total_points),
+        backgroundColor:ranking.map(k=>k.color),borderRadius:8}]},
+      options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+    return ()=>chart.current&&chart.current.destroy();
+  },[db]);
+  const punish = async()=>{
+    const kid = prompt("Nombre exacto del hijo a penalizar:"); const k = db.kids.find(x=>x.name.toLowerCase()===(kid||"").toLowerCase());
+    if(!k) return flash("No encuentro ese hijo");
+    const pts = +prompt("Puntos a restar (positivo):","5"); const why = prompt("Motivo:","Mala actitud")||"";
+    const {error} = await rpc("apply_points",{p_kid:k.id,p_delta:-Math.abs(pts),p_reason:why,p_type:"penalty"});
+    flash(error?error.message:`-${Math.abs(pts)} a ${k.name}`); refresh();
+  };
+  return <div className="pb-6 space-y-4">
+    {star && <div className="bg-yellow-100 card p-4 shadow-sm text-center">
+      <div className="text-sm font-bold text-yellow-700">⭐ Hijo de la semana</div>
+      <div className="text-2xl font-black">{star.k.emoji} {star.k.name}</div>
+      <div className="font-bold text-yellow-700">{star.w} pts esta semana</div></div>}
+    <div className="bg-white card p-4 shadow-sm"><canvas ref={ref} height="200"></canvas></div>
+    <Btn c="bg-red-500" className="w-full" onClick={punish}>⚖️ Restar puntos / castigo</Btn>
+    <div className="bg-white card p-4 shadow-sm">
+      <h3 className="font-black mb-2">Clasificación</h3>
+      {ranking.map((k,i)=><div key={k.id} className="flex justify-between text-sm font-bold py-1"><span>{i+1}. {k.emoji} {k.name}</span><span>{k.total_points}</span></div>)}
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
