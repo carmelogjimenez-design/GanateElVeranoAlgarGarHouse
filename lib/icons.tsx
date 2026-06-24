@@ -34,11 +34,14 @@ export function missionIcon(text: string): LucideIcon {
 import {
   Brain, Star, Medal, Timer, Crown, Award,
   Cat, Dog, Rabbit, Bird, Fish, Ghost, Rocket, Gamepad2, Bot, Origami,
+  Trophy, Zap, Gem, Sun, Shield, Heart, Flag,
 } from "lucide-react";
 
 const BADGE_ICONS: Record<string, LucideIcon> = {
   target: Target, flame: Flame, brain: Brain, star: Star,
   sparkles: Sparkles, medal: Medal, timer: Timer, crown: Crown,
+  trophy: Trophy, zap: Zap, gem: Gem, sun: Sun, shield: Shield,
+  heart: Heart, flag: Flag, book: BookOpen, dumbbell: Dumbbell, rocket: Rocket,
 };
 export const badgeIcon = (key: string): LucideIcon => BADGE_ICONS[key] || Award;
 

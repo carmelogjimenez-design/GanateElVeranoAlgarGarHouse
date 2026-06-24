@@ -17,7 +17,7 @@ import ActivityWall from "@/components/ActivityWall";
 import type { Ctx, Kid } from "@/lib/types";
 import {
   Flame, Clock, Trophy, ArrowRight, Check, Target, Award, Brain, Sparkles,
-  Crown, Timer, Medal, Star, Gift, ArrowLeftRight, Zap,
+  Crown, Timer, Medal, Star, Gift, ArrowLeftRight, Zap, Lock,
 } from "lucide-react";
 
 export default function KidHome({ ctx, me, onTab, onMercado }:
@@ -59,6 +59,8 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
   const lvl = levelOf(me.total_points);
   const earned = new Set(db.kid_badges.filter((b) => b.kid_id === me.id).map((b) => b.badge_code));
   const catalog = [...db.badges_catalog].sort((a, b) => a.sort - b.sort);
+  const ordered = [...catalog].sort((a, b) => (earned.has(b.code) ? 1 : 0) - (earned.has(a.code) ? 1 : 0));
+  const homeFour = ordered.slice(0, 4);
 
   const today = todayStr();
   const todayAsg = myAsg.filter((a) => a.due_date === today);
@@ -200,17 +202,23 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-navy tracking-tight">Tus medallas</h3><button onClick={() => setShowBadges(true)} className="text-sm font-semibold text-brand">Ver todas</button></div>
             <div className="grid grid-cols-4 gap-3">
-              {catalog.slice(0, 8).map((b) => {
+              {homeFour.map((b) => {
                 const Icon = badgeIcon(b.icon);
                 const on = earned.has(b.code);
                 return (
                   <div key={b.code} className="flex flex-col items-center" title={b.name}>
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${on ? "text-white" : "bg-slate-100 text-slate-300"}`} style={on ? { background: b.color } : undefined}><Icon size={22} /></div>
+                    <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center ${on ? "text-white" : "text-slate-300 bg-slate-100"}`} style={on ? { background: `linear-gradient(135deg,${b.color},${b.color}bb)`, boxShadow: `0 6px 16px -4px ${b.color}99` } : { filter: "grayscale(1)" }}>
+                      <Icon size={24} />
+                      <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-sm" style={{ background: on ? "#fff" : "#E2E8F0" }}>
+                        {on ? <Check size={11} className="text-green-500" strokeWidth={3} /> : <Lock size={10} className="text-slate-400" />}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-400 mt-1.5 text-center leading-tight w-full truncate">{b.name}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="text-xs text-slate-400 font-medium mt-3">{earned.size} de {catalog.length} desbloqueadas</div>
+            <div className="mt-3"><Bar v={earned.size} max={Math.max(1, catalog.length)} c="#FF8A00" /><div className="text-xs text-slate-400 font-medium mt-1.5">{earned.size} de {catalog.length} medallas</div></div>
           </Card>
         </div>
       </div>
@@ -256,16 +264,23 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
         </div>, document.body)}
 
       {showBadges && (
-        <Modal title="Logros" onClose={() => setShowBadges(false)}>
+        <Modal title="Tus medallas" onClose={() => setShowBadges(false)}>
+          <div className="flex items-center gap-2 mb-4">
+            <Bar v={earned.size} max={Math.max(1, catalog.length)} c="#FF8A00" />
+            <span className="text-xs font-bold text-slate-400 shrink-0">{earned.size}/{catalog.length}</span>
+          </div>
           <div className="space-y-2.5">
-            {catalog.map((b) => {
+            {ordered.map((b) => {
               const Icon = badgeIcon(b.icon);
               const on = earned.has(b.code);
               return (
-                <div key={b.code} className={`flex items-center gap-3 p-3 rounded-xl ${on ? "bg-slate-50" : "opacity-50"}`}>
-                  <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: on ? b.color : "#CBD5E1" }}><Icon size={20} /></div>
-                  <div className="flex-1 min-w-0"><div className="font-semibold text-navy">{b.name}</div><div className="text-xs text-slate-400">{b.description}</div></div>
-                  {on && <span className="text-xs font-bold text-teal">✓</span>}
+                <div key={b.code} className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: on ? `${b.color}12` : "#F8FAFC", boxShadow: on ? `inset 0 0 0 1px ${b.color}33` : "inset 0 0 0 1px #EEF2F6" }}>
+                  <div className="relative w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={on ? { background: `linear-gradient(135deg,${b.color},${b.color}bb)`, color: "#fff", boxShadow: `0 6px 16px -4px ${b.color}99` } : { background: "#E2E8F0", color: "#94A3B8", filter: "grayscale(1)" }}>
+                    <Icon size={22} />
+                  </div>
+                  <div className="flex-1 min-w-0"><div className={`font-bold ${on ? "text-navy" : "text-slate-400"}`}>{b.name}</div><div className="text-xs text-slate-400">{b.description}</div></div>
+                  {on ? <span className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center shrink-0"><Check size={14} className="text-green-500" strokeWidth={3} /></span>
+                      : <span className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0"><Lock size={13} className="text-slate-300" /></span>}
                 </div>
               );
             })}
