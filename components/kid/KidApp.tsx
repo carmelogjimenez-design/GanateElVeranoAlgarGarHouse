@@ -11,7 +11,7 @@ import type { Ctx } from "@/lib/types";
 import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sun } from "lucide-react";
 
 export default function KidApp({ ctx }: { ctx: Ctx }) {
-  const { db, kid, setScreen } = ctx;
+  const { db, kid, setScreen, isAdmin } = ctx;
   const me = db.kids.find((k) => k.id === kid!.id) || kid!;
   const [tab, setTab] = useState("inicio");
   const [mercado, setMercado] = useState(false);
@@ -46,12 +46,13 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
             {bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
           </button>
           <Avatar name={me.name} color={me.color} size={36} />
-          <button onClick={() => setScreen("lobby")} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500" title="Salir"><LogOut size={16} /></button>
+          <button onClick={() => setScreen(isAdmin ? "admin" : "lobby")} className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500" title="Salir"><LogOut size={16} /></button>
         </div>
       </header>
 
       {/* CONTENT */}
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-5">
+        {isAdmin && <div className="mb-4 bg-navy/5 border border-navy/10 rounded-xl px-3 py-2 text-xs font-semibold text-navy flex items-center justify-between"><span>🧪 Modo test (superadmin): estás viendo el panel de {me.name}</span><button onClick={() => setScreen("admin")} className="text-brand">Volver a padres</button></div>}
         {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} />}
         {tab === "tareas" && <div className="max-w-2xl"><KidTasks ctx={ctx} me={me} asg={myAsg} /></div>}
         {tab === "estudio" && <div className="max-w-2xl"><KidStudy ctx={ctx} me={me} /></div>}

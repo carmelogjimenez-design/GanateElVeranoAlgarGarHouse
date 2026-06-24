@@ -3,7 +3,7 @@ import { Card, Avatar, Bar, Btn, Stat } from "@/components/ui/atoms";
 import { rpc, last7 } from "@/lib/helpers";
 import { levelOf } from "@/lib/game";
 import type { Ctx, Kid } from "@/lib/types";
-import { Users, ClipboardCheck, Target, Sparkles, Star, Scale, ArrowRight } from "lucide-react";
+import { Users, ClipboardCheck, Target, Sparkles, Star, Scale, ArrowRight, FlaskConical } from "lucide-react";
 
 export default function AdminResumen({ ctx, onGo }: { ctx: Ctx; onGo: (t: string) => void }) {
   const { db, refresh, flash } = ctx;
@@ -26,6 +26,16 @@ export default function AdminResumen({ ctx, onGo }: { ctx: Ctx; onGo: (t: string
 
   return (
     <div className="space-y-5">
+      <Card className="p-4 bg-navy/[0.03] border-navy/10">
+        <div className="flex items-center gap-2 mb-2"><FlaskConical size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight text-sm">Modo test · ver panel de un hijo</h3></div>
+        <div className="flex flex-wrap gap-2">
+          {db.kids.map((k) => (
+            <button key={k.id} onClick={() => { ctx.setKid(k); ctx.setScreen("kid"); }}
+              className="text-sm font-semibold px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-navy hover:border-brand">{k.name}</button>
+          ))}
+        </div>
+      </Card>
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat label="Hijos" value={db.kids.length} accent="#3B82F6" icon={<Users size={18} />} />
         <Stat label="Pendiente de validar" value={pend} accent="#FF8A00" icon={<ClipboardCheck size={18} />} />

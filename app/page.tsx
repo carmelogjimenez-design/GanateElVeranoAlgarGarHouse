@@ -43,7 +43,7 @@ export default function Page() {
 
   if (!db) return <div className="p-10 text-center text-2xl">Cargando el cuartel general… 🏠</div>;
 
-  const ctx: Ctx = { db, refresh, flash, setScreen, setKid, kid, session, logout };
+  const ctx: Ctx = { db, refresh, flash, setScreen, setKid, kid, isAdmin: !!isAdmin, session, logout };
 
   // Logueado: comprobando permisos / admin / pendiente
   if (session) {

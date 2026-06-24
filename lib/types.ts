@@ -46,6 +46,7 @@ export type Ctx = {
   setScreen: (s: Screen) => void;
   setKid: (k: Kid | null) => void;
   kid: Kid | null;
+  isAdmin: boolean;
   session: unknown;
   logout: () => Promise<void>;
 };
