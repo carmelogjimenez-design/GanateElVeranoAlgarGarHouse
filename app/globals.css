@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { font-family: ui-rounded, "Segoe UI", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+::-webkit-scrollbar { width: 0; }
