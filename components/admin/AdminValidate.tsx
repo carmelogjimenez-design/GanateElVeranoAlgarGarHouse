@@ -28,6 +28,7 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
                   <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">{a.title}</div><div className="text-xs text-slate-400">{k?.name}{a.note ? ` · "${a.note}"` : ""}</div></div>
                   <Chip tone="brand">+{a.points} XP</Chip>
                 </div>
+                {a.photo_url && <a href={a.photo_url} target="_blank" rel="noreferrer"><img src={a.photo_url} alt="evidencia" className="w-full h-40 object-cover rounded-xl mb-3" /></a>}
                 <div className="flex gap-2">
                   <Btn variant="teal" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("approve_assignment", { p_assignment: a.id }, "Validada. +" + a.points + " XP")}><Check size={16} /> Validar</Btn>
                   <Btn variant="ghost" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => { const p = prompt("Penalización en XP (0 = ninguna):", "0"); call("reject_assignment", { p_assignment: a.id, p_penalty: +(p || 0) }, "Rechazada."); }}><X size={16} /> Rechazar</Btn>

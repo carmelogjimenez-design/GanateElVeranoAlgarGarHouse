@@ -4,7 +4,6 @@ import { rpc } from "@/lib/helpers";
 import {
   levelOf, levelProgress, xpToNext, nearestReward,
   weeklyXp, weekdayBars, studyTodaySeconds, teamWeeklyXp, streakDays,
-  WEEKLY_GOAL, TEAM_WEEKLY_GOAL,
 } from "@/lib/game";
 import { missionIcon } from "@/lib/icons";
 import { COPY, pick } from "@/lib/copy";
@@ -33,7 +32,11 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
   const barMax = Math.max(...bars, 1);
   const studyH = (studyTodaySeconds(db.study_sessions, me.id) / 3600).toFixed(1);
   const tWeek = teamWeeklyXp(db.point_events, teamKids.map((k) => k.id));
-  const daysLeft = 7 - ((new Date().getDay() + 6) % 7);
+  const goal = me.weekly_goal || 100;
+  const teamGoal = db.settings?.team_goal || 200;
+  const challengeLabel = db.settings?.challenge_label || "Reto de equipo";
+  const until = db.settings?.challenge_until;
+  const daysLeft = until ? Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 864e5)) : 7 - ((new Date().getDay() + 6) % 7);
   const next = nearestReward(me, db.rewards);
   const NextIcon = next ? missionIcon(next.title) : Gift;
   const incoming = db.gifts.find((g) => g.to_kid === me.id && g.status === "pending");
@@ -98,9 +101,9 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
         {/* Objetivo semanal */}
         <Card className="p-5">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Objetivo semanal</div>
-          <div className="mt-1"><span className="text-3xl font-extrabold text-navy">{wXp}</span><span className="text-slate-400 font-semibold">/{WEEKLY_GOAL} pts</span></div>
-          <div className="mt-3"><Bar v={wXp} max={WEEKLY_GOAL} /></div>
-          <div className="text-sm font-semibold text-teal mt-3">{wXp >= WEEKLY_GOAL ? "¡Objetivo cumplido! 🎉" : "¡Vamos, tú puedes!"}</div>
+          <div className="mt-1"><span className="text-3xl font-extrabold text-navy">{wXp}</span><span className="text-slate-400 font-semibold">/{goal} pts</span></div>
+          <div className="mt-3"><Bar v={wXp} max={goal} /></div>
+          <div className="text-sm font-semibold text-teal mt-3">{wXp >= goal ? "¡Objetivo cumplido! 🎉" : "¡Vamos, tú puedes!"}</div>
           <div className="mt-4 flex items-center justify-center"><div className="w-14 h-14 rounded-2xl bg-brand/10 text-brand flex items-center justify-center"><Zap size={26} /></div></div>
         </Card>
       </div>
@@ -196,13 +199,13 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
 
         {/* Reto de equipo */}
         <Card className="p-0 overflow-hidden">
-          <div className="bg-brand text-white px-4 py-2.5 flex items-center justify-between"><span className="font-bold text-sm">¡Reto activo!</span><span className="text-xs font-medium flex items-center gap-1"><Clock size={13} /> {daysLeft} días restantes</span></div>
+          <div className="bg-brand text-white px-4 py-2.5 flex items-center justify-between"><span className="font-bold text-sm">{challengeLabel}</span><span className="text-xs font-medium flex items-center gap-1"><Clock size={13} /> {daysLeft} días restantes</span></div>
           <div className="p-4 flex items-center gap-3">
             <div className="flex-1">
-              <div className="font-bold text-navy">Reto de equipo</div>
-              <div className="text-xs text-slate-500 mb-2">Gana {TEAM_WEEKLY_GOAL} pts en equipo esta semana</div>
-              <Bar v={tWeek} max={TEAM_WEEKLY_GOAL} />
-              <div className="text-xs font-semibold text-slate-400 mt-1.5">{tWeek}/{TEAM_WEEKLY_GOAL}</div>
+              <div className="font-bold text-navy">{challengeLabel}</div>
+              <div className="text-xs text-slate-500 mb-2">Gana {teamGoal} pts en equipo</div>
+              <Bar v={tWeek} max={teamGoal} />
+              <div className="text-xs font-semibold text-slate-400 mt-1.5">{tWeek}/{teamGoal}</div>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-yellow-400/15 text-yellow-500 flex items-center justify-center"><Trophy size={26} /></div>
           </div>

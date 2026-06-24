@@ -1,26 +1,45 @@
 "use client";
-import { Card, Chip, Btn, IconTile } from "@/components/ui/atoms";
+import { useState } from "react";
+import { Card, Chip, Btn, IconTile, Modal } from "@/components/ui/atoms";
 import { COPY, pick } from "@/lib/copy";
 import { rpc } from "@/lib/helpers";
+import { sb } from "@/lib/supabase";
 import { missionIcon } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
-import { Check, Clock, CheckCircle2 } from "lucide-react";
+import { Check, Clock, CheckCircle2, Camera, Users } from "lucide-react";
 
 export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Assignment[] }) {
-  const { flash, refresh, kid } = ctx;
+  const { db, flash, refresh, kid } = ctx;
+  const [busy, setBusy] = useState<string | null>(null);
+  const [tutor, setTutor] = useState(false);
   const pending = asg.filter((a) => ["todo", "rejected"].includes(a.status));
   const wait = asg.filter((a) => a.status === "pending");
   const done = asg.filter((a) => a.status === "approved");
-  const mark = async (a: Assignment) => {
-    const { error } = await rpc("mark_done", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin });
+
+  const complete = async (a: Assignment, file?: File | null) => {
+    setBusy(a.id);
+    let url: string | null = null;
+    if (file) {
+      const path = `${me.id}/${a.id}-${Date.now()}.jpg`;
+      const { error: upErr } = await sb.storage.from("evidencias").upload(path, file, { upsert: true });
+      if (upErr) { flash("No se pudo subir la foto"); setBusy(null); return; }
+      url = sb.storage.from("evidencias").getPublicUrl(path).data.publicUrl;
+    }
+    const { error } = await rpc("mark_done", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin, p_photo: url });
+    setBusy(null);
     if (error) flash(error.message); else { flash(pick(COPY.done)); refresh(); }
   };
+
   return (
     <div className="space-y-2.5 pb-6">
-      <h3 className="font-bold text-navy tracking-tight px-0.5 mb-1">Misiones de hoy</h3>
+      <div className="flex items-center justify-between px-0.5">
+        <h3 className="font-bold text-navy tracking-tight">Misiones de hoy</h3>
+        {me.can_tutor && <button onClick={() => setTutor(true)} className="text-sm font-semibold text-teal flex items-center gap-1"><Users size={15} /> Marcar por un hermano</button>}
+      </div>
       {pending.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">{pick(COPY.noTasks)}</Card>}
       {pending.map((a) => {
         const Icon = missionIcon(a.title);
+        const loading = busy === a.id;
         return (
           <Card key={a.id} className="p-4">
             <div className="flex items-center gap-3">
@@ -28,10 +47,26 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-navy truncate">{a.title}</div>
                 {a.status === "rejected"
-                  ? <div className="text-xs font-medium text-red-500 mt-0.5">Rechazada. A la segunda va la vencida.</div>
-                  : <Chip tone="brand">+{a.points} XP</Chip>}
+                  ? <div className="text-xs font-medium text-red-500 mt-0.5">Rechazada · reinténtalo</div>
+                  : <div className="flex items-center gap-2"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}</div>}
               </div>
-              <Btn variant="primary" className="px-3 py-2.5" onClick={() => mark(a)}><Check size={18} /></Btn>
+              {a.photo_required ? (
+                <label className={`bg-brand text-white font-semibold rounded-xl px-3 py-2.5 text-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition ${loading ? "opacity-50" : ""}`}>
+                  <Camera size={16} /> Foto
+                  <input type="file" accept="image/*" capture="environment" hidden disabled={loading}
+                    onChange={(e) => e.target.files?.[0] && complete(a, e.target.files[0])} />
+                </label>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <label className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center cursor-pointer" title="Adjuntar foto">
+                    <Camera size={16} />
+                    <input type="file" accept="image/*" capture="environment" hidden disabled={loading}
+                      onChange={(e) => e.target.files?.[0] && complete(a, e.target.files[0])} />
+                  </label>
+                  <button onClick={() => complete(a)} disabled={loading}
+                    className="w-9 h-9 rounded-full border-2 border-slate-200 hover:border-teal hover:bg-teal hover:text-white text-transparent flex items-center justify-center transition disabled:opacity-50"><Check size={18} /></button>
+                </div>
+              )}
             </div>
           </Card>
         );
@@ -47,9 +82,44 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
         <Card key={a.id} className="p-3.5 flex items-center gap-3 opacity-70">
           <IconTile color="#22C55E"><CheckCircle2 size={18} /></IconTile>
           <span className="font-medium text-navy flex-1 truncate line-through decoration-slate-300">{a.title}</span>
-          <Chip tone="green">+{a.points} XP</Chip>
+          <Chip tone="green">+{a.points} pts</Chip>
         </Card>
       ))}
+
+      {tutor && <TutorModal ctx={ctx} me={me} onClose={() => setTutor(false)} />}
     </div>
+  );
+}
+
+function TutorModal({ ctx, me, onClose }: { ctx: Ctx; me: Kid; onClose: () => void }) {
+  const { db, flash, refresh, kid } = ctx;
+  const others = db.kids.filter((k) => k.id !== me.id);
+  const mark = async (aid: string) => {
+    const { error } = await rpc("tutor_mark_done", { p_tutor: me.id, p_pin: kid!.pin, p_assignment: aid });
+    if (error) flash(error.message); else { flash("Marcada por ti. La validan los padres."); refresh(); onClose(); }
+  };
+  return (
+    <Modal title="Marcar misión por un hermano" onClose={onClose}>
+      <div className="space-y-4">
+        {others.map((k) => {
+          const todo = db.assignments.filter((a) => a.kid_id === k.id && ["todo", "rejected"].includes(a.status));
+          if (!todo.length) return null;
+          return (
+            <div key={k.id}>
+              <div className="font-semibold text-navy text-sm mb-1">{k.name}</div>
+              <div className="space-y-1.5">
+                {todo.map((a) => (
+                  <button key={a.id} onClick={() => mark(a.id)} className="w-full flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5 text-sm font-medium text-navy">
+                    <span className="truncate">{a.title}</span><span className="text-teal font-bold">+{a.points}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {others.every((k) => !db.assignments.some((a) => a.kid_id === k.id && ["todo", "rejected"].includes(a.status))) &&
+          <p className="text-slate-400 text-sm font-medium text-center py-4">No hay misiones pendientes de otros hermanos.</p>}
+      </div>
+    </Modal>
   );
 }

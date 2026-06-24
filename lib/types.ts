@@ -2,6 +2,7 @@ export type Team = { id: string; name: string; emoji: string; color: string; cre
 export type Kid = {
   id: string; name: string; emoji: string; color: string; team_id: string | null;
   total_points: number; study_enabled: boolean; active: boolean; created_at: string; pin?: string;
+  weekly_goal: number; can_tutor: boolean; app_access: boolean;
 };
 export type Task = {
   id: string; title: string; description: string; category: string; frequency: string;
@@ -26,10 +27,14 @@ export type Subject = { id: string; kid_id: string; name: string; level: string;
 export type StudySession = { id: string; kid_id: string; subject_id: string; seconds: number; day: string; created_at: string };
 export type PointEvent = { id: string; kid_id: string; delta: number; reason: string; type: string; ref_id: string | null; created_at: string };
 
+export type Settings = { id: number; team_goal: number; challenge_label: string; challenge_until: string | null; weekly_goal_default: number };
+export type TaskTarget = { id: string; task_id: string; kid_id: string; created_at: string };
+
 export type DB = {
   teams: Team[]; kids: Kid[]; tasks: Task[]; assignments: Assignment[];
   rewards: Reward[]; redemptions: Redemption[]; gifts: Gift[];
   subjects: Subject[]; study_sessions: StudySession[]; point_events: PointEvent[];
+  task_targets: TaskTarget[]; settings: Settings | null;
 };
 
 export type Screen = "lobby" | "kid" | "admin";
