@@ -7,13 +7,13 @@ export type Kid = {
 };
 export type Task = {
   id: string; title: string; description: string; category: string; frequency: string;
-  difficulty: string; points: number; priority: string; photo_required: boolean; active: boolean; scope?: string; created_at: string;
+  difficulty: string; points: number; priority: string; photo_required: boolean; active: boolean; scope?: string; deadline_time?: string | null; created_at: string;
 };
 export type Assignment = {
   id: string; task_id: string | null; kid_id: string | null; team_id: string | null; title: string;
   points: number; photo_required: boolean; due_date: string | null;
   status: "todo" | "pending" | "approved" | "rejected" | "open";
-  photo_url: string | null; note: string | null; completed_at: string | null; validated_at: string | null; created_at: string;
+  photo_url: string | null; note: string | null; completed_at: string | null; validated_at: string | null; expired?: boolean; created_at: string;
 };
 export type Reward = { id: string; title: string; description: string; emoji: string; cost: number; active: boolean; created_at: string };
 export type Redemption = {

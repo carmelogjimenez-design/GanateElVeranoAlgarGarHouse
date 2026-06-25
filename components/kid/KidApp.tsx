@@ -57,6 +57,8 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
     localStorage.setItem(bk, JSON.stringify(codes));
   }, [me.total_points, me.id, myLevel, me.color, db.kid_badges, db.badges_catalog]);
 
+  useEffect(() => { rpc("expire_overdue", {}).then(({ data }) => { if (data) refresh(); }); /* eslint-disable-next-line */ }, []);
+
   const chooseAvatar = async (key: string) => {
     const { error } = await rpc("set_avatar", { p_kid: me.id, p_pin: kid!.pin, p_avatar: key });
     if (error) flash(error.message); else { refresh(); setAvatarOpen(false); }

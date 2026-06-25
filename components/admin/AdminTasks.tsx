@@ -5,7 +5,7 @@ import { sb } from "@/lib/supabase";
 import { rpc, todayStr } from "@/lib/helpers";
 import { missionIcon, freqColor, FREQ_META, scopeLabel } from "@/lib/icons";
 import type { Ctx, Task } from "@/lib/types";
-import { Plus, Trash2, Repeat, CalendarClock } from "lucide-react";
+import { Plus, Trash2, Repeat, CalendarClock, Clock } from "lucide-react";
 
 function AssignModal({ ctx, task, onClose }: { ctx: Ctx; task: Task; onClose: () => void }) {
   const { db, refresh, flash } = ctx;
@@ -106,6 +106,10 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
     await sb.from("tasks").update({ points }).eq("id", id);
     flash("Puntos actualizados"); refresh();
   };
+  const saveDeadline = async (id: string, val: string) => {
+    await sb.from("tasks").update({ deadline_time: val || null }).eq("id", id);
+    flash(val ? `Hora tope: ${val} (España)` : "Hora tope quitada"); refresh();
+  };
   return (
     <div className="pb-6">
       <Card className="p-4 space-y-2.5 mb-4">
@@ -130,6 +134,8 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
           <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full" style={{ background: "#EF4444" }} /> Rojo · máxima/mes, cualquiera</span>
         </div>
       </Card>
+
+      <div className="text-[11px] text-slate-400 font-medium mb-3 flex items-start gap-1.5 px-0.5"><Clock size={13} className="text-red-400 mt-0.5 shrink-0" /> El reloj de cada misión = <b className="text-navy/70">hora tope</b> (hora de España). Si la misión no se hace a tiempo, le resta sus puntos y al hijo le cae un mensaje de recochineo.</div>
 
       <div className="flex items-center justify-between mb-3 px-0.5">
         <h3 className="font-bold text-navy tracking-tight">Catálogo de misiones ({db.tasks.length})</h3>
@@ -160,6 +166,10 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
                             <span className="font-bold text-xs" style={{ color: col }}>XP</span>
                           </div>
                           <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={{ background: open ? "#EFF6FF" : "#F1F5F9", color: open ? "#2563EB" : "#64748B" }}>{open ? "Cualquiera" : "Por equipo"}</span>
+                          <label title="Hora tope (hora de España). Si no se hace a tiempo, resta los puntos." className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 border ${t.deadline_time ? "bg-red-50 border-red-200" : "bg-slate-100 border-slate-200"}`}>
+                            <Clock size={12} className={t.deadline_time ? "text-red-500" : "text-slate-400"} />
+                            <input type="time" defaultValue={t.deadline_time ? t.deadline_time.slice(0, 5) : ""} onBlur={(e) => saveDeadline(t.id, e.target.value)} className="bg-transparent text-[11px] font-bold outline-none w-[62px]" style={{ color: t.deadline_time ? "#DC2626" : "#64748B" }} />
+                          </label>
                           {FREQ_META[t.frequency] && <span className="text-[11px] font-semibold text-slate-400">{FREQ_META[t.frequency].diff}</span>}
                           {t.photo_required && <Chip tone="amber">foto</Chip>}
                           {targets > 0 && <Chip tone="teal">recurrente · {targets}</Chip>}

@@ -17,7 +17,7 @@ import { rpc, todayStr } from "@/lib/helpers";
 export default function AdminApp({ ctx }: { ctx: Ctx }) {
   const { db, logout, refresh } = ctx;
   const [tab, setTab] = useState("resumen");
-  useEffect(() => { rpc("generate_missions", { p_date: todayStr() }).then(({ data }) => { if (data) refresh(); }); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { (async () => { const g = await rpc("generate_missions", { p_date: todayStr() }); const e = await rpc("expire_overdue", {}); if (g.data || e.data) refresh(); })(); /* eslint-disable-next-line */ }, []);
   const pend =
     db.assignments.filter((a) => a.status === "pending").length +
     db.redemptions.filter((r) => r.status === "pending").length +

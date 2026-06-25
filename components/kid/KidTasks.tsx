@@ -11,6 +11,15 @@ import { missionIcon, freqColor } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
 import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand } from "lucide-react";
 
+const RECOCHINEO = [
+  "Se acabó el tiempo, campeón. Esos puntos volaron 🫡",
+  "Tic-tac… tic-tac… ¡fuera! Te ganó el reloj ⏰",
+  "Demasiado lento. Milo lo habría hecho antes 🐶",
+  "El sofá ganó esta batalla. Puntos restados 🛋️",
+  "Plazo agotado. La próxima, menos siesta 😴",
+  "Llegaste tarde como el examen sin estudiar. Menos puntos 📉",
+];
+
 const EPIC = [
   "Sé un hijo top, ejemplar. Ponte al servicio de los demás: vivimos para morir y morimos para vivir.",
   "El que ayuda sin que se lo pidan es el verdadero crack de la casa.",
@@ -23,7 +32,8 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
   const { db, flash, refresh, kid } = ctx;
   const [busy, setBusy] = useState<string | null>(null);
   const [tutor, setTutor] = useState(false);
-  const pending = asg.filter((a) => ["todo", "rejected"].includes(a.status));
+  const pending = asg.filter((a) => ["todo", "rejected"].includes(a.status) && !a.expired);
+  const expired = asg.filter((a) => a.expired);
   const wait = asg.filter((a) => a.status === "pending");
   const done = asg.filter((a) => a.status === "approved");
   const today = todayStr();
@@ -33,7 +43,7 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
   const [photoAsk, setPhotoAsk] = useState<Assignment | null>(null);
   const [nextAsk, setNextAsk] = useState<{ kind: "mission" | "study" | "phrase"; next?: Assignment; phrase?: string } | null>(null);
   const openNext = (justDone: Assignment) => {
-    const remaining = asg.filter((x) => x.id !== justDone.id && ["todo", "rejected"].includes(x.status));
+    const remaining = asg.filter((x) => x.id !== justDone.id && ["todo", "rejected"].includes(x.status) && !x.expired);
     if (remaining.length) setNextAsk({ kind: "mission", next: remaining[0] });
     else if (me.study_enabled && mySubjects.length) setNextAsk({ kind: "study" });
     else setNextAsk({ kind: "phrase", phrase: pick(EPIC) });
@@ -100,7 +110,7 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
                 <div className="font-semibold text-navy truncate">{a.title}</div>
                 {a.status === "rejected"
                   ? <div className="text-xs font-medium text-red-500 mt-0.5">Rechazada · reinténtalo</div>
-                  : <div className="flex items-center gap-2"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}</div>}
+                  : <div className="flex items-center gap-2 flex-wrap"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}{(() => { const dl = db.tasks.find((t) => t.id === a.task_id)?.deadline_time; return dl ? <Chip tone="amber">⏰ antes de {dl.slice(0, 5)}</Chip> : null; })()}</div>}
               </div>
               {a.photo_required ? (
                 <Btn variant="primary" className="text-sm py-2.5 px-3 flex items-center gap-1.5" disabled={loading} onClick={() => setPhotoAsk(a)}>
@@ -133,6 +143,19 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
           <IconTile color="#22C55E"><CheckCircle2 size={18} /></IconTile>
           <span className="font-medium text-navy flex-1 truncate line-through decoration-slate-300">{a.title}</span>
           <Chip tone="green">+{a.points} pts</Chip>
+        </Card>
+      ))}
+
+      {expired.map((a) => (
+        <Card key={a.id} className="p-4" style={{ borderLeft: "4px solid #EF4444" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-red-100 text-red-500 flex items-center justify-center shrink-0"><Clock size={20} /></div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-navy truncate line-through decoration-red-300">{a.title}</div>
+              <div className="text-xs font-semibold text-red-500 mt-0.5">{RECOCHINEO[a.id.charCodeAt(0) % RECOCHINEO.length]}</div>
+            </div>
+            <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-red-100 text-red-600 shrink-0">−{a.points} pts</span>
+          </div>
         </Card>
       ))}
 
