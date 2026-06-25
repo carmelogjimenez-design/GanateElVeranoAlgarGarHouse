@@ -38,13 +38,15 @@ export type TaskTarget = { id: string; task_id: string; kid_id: string; created_
 export type Badge = { code: string; name: string; description: string; icon: string; color: string; sort: number };
 export type KidBadge = { id: string; kid_id: string; badge_code: string; earned_at: string };
 
+export type MiloWalk = { id: string; kid_id: string | null; day: string; started_at: string; start_photo: string | null; ended_at: string | null; end_photo: string | null; minutes: number | null; points: number | null; status: "in_progress" | "done"; created_at: string };
+
 export type DB = {
   teams: Team[]; kids: Kid[]; tasks: Task[]; assignments: Assignment[];
   rewards: Reward[]; redemptions: Redemption[]; gifts: Gift[];
   subjects: Subject[]; study_sessions: StudySession[]; point_events: PointEvent[];
   task_targets: TaskTarget[]; settings: Settings | null;
   badges_catalog: Badge[]; kid_badges: KidBadge[]; study_rewards: StudyReward[];
-  study_questions_seen: StudyQuestionSeen[]; test_sessions: TestSession[]; events: GameEvent[]; activity_reactions: ActivityReaction[];
+  study_questions_seen: StudyQuestionSeen[]; test_sessions: TestSession[]; events: GameEvent[]; activity_reactions: ActivityReaction[]; milo_walks: MiloWalk[];
 };
 
 export type Screen = "lobby" | "kid" | "admin";

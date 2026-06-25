@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Card, Chip, Btn, IconTile, Modal } from "@/components/ui/atoms";
+import MiloCard from "@/components/kid/MiloCard";
 import { COPY, pick } from "@/lib/copy";
 import { rpc, todayStr } from "@/lib/helpers";
 import { notifyParents } from "@/lib/push";
@@ -60,6 +61,7 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
 
   return (
     <div className="space-y-2.5 pb-6">
+      <MiloCard ctx={ctx} me={me} />
       <div className="flex items-center justify-between px-0.5">
         <h3 className="font-bold text-navy tracking-tight">Misiones de hoy</h3>
         {me.can_tutor && <button onClick={() => setTutor(true)} className="text-sm font-semibold text-teal flex items-center gap-1"><Users size={15} /> Marcar por un hermano</button>}
