@@ -22,6 +22,9 @@ export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const mine = offers.filter((o) => o.maker_id === me.id || o.taker_id === me.id).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
   const nameOf = (id: string | null) => db.kids.find((k) => k.id === id)?.name || "—";
   const kidOf = (id: string | null) => db.kids.find((k) => k.id === id);
+  const isDoer = (o: MarketOffer) => (o.kind === "offer" ? o.maker_id : o.taker_id) === me.id;
+  const myFavors = offers.filter((o) => o.status === "taken" && isDoer(o));
+  const mySubmitted = offers.filter((o) => o.status === "submitted" && isDoer(o));
 
   const create = async () => {
     if (!title.trim()) return flash("Ponle un título al trato");
@@ -43,6 +46,12 @@ export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
     const { error } = await rpc("cancel_offer", { p_offer: o.id, p_maker: me.id, p_pin: kid!.pin });
     setBusy(null);
     if (error) flash(error.message); else { flash("Trato retirado"); refresh(); }
+  };
+  const markDone = async (o: MarketOffer) => {
+    setBusy(o.id);
+    const { error } = await rpc("market_done", { p_offer: o.id, p_kid: me.id, p_pin: kid!.pin });
+    setBusy(null);
+    if (error) { flash(error.message); sfx("reject"); } else { notifyParents("Gánate el Verano", `${me.name} hizo un favor del mercado`); flash("¡Marcado! Lo validan los jefes."); sfx("complete"); refresh(); }
   };
 
   // offer  = yo hago un favor y cobro  -> quien acepta PAGA
@@ -94,6 +103,38 @@ export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
           <b className="text-white">💪 Ofreces</b> un favor y cobras XP, o <b className="text-white">🙏 pides</b> un favor pagando XP. Quien lo hace, gana; quien lo recibe, paga. Los jefes dan el OK.
         </p>
       </div>
+
+      {/* FAVORES QUE DEBES (al que le toca hacerlo) */}
+      {(myFavors.length > 0 || mySubmitted.length > 0) && (
+        <div>
+          <div className="flex items-center gap-1.5 px-0.5 mb-2"><HandHeart size={14} style={{ color: "#FF6B5E" }} /><span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#FF6B5E" }}>Favores que debes</span></div>
+          <div className="space-y-2.5">
+            {myFavors.map((o) => {
+              const other = kidOf(o.kind === "offer" ? o.taker_id : o.maker_id);
+              const loading = busy === o.id;
+              return (
+                <Card key={o.id} className="p-4" style={{ borderLeft: "4px solid #FF6B5E" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: "#FF6B5E" }}><HandHeart size={20} /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-navy truncate">{o.title}</div>
+                      <div className="text-[11px] text-slate-400 font-medium">{other ? `para ${other.name}` : ""} · ganas +{o.points} XP al hacerlo</div>
+                    </div>
+                    <Btn variant="teal" className="text-xs py-2 px-3 flex items-center gap-1.5" disabled={loading} onClick={() => markDone(o)}><Check size={15} /> Hecho</Btn>
+                  </div>
+                </Card>
+              );
+            })}
+            {mySubmitted.map((o) => (
+              <Card key={o.id} className="p-3.5 flex items-center gap-3 opacity-80">
+                <div className="w-10 h-10 rounded-2xl bg-amber-400/15 text-amber-500 flex items-center justify-center shrink-0"><Check size={18} /></div>
+                <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">{o.title}</div><div className="text-[11px] text-amber-600 font-medium">Hecho · esperando que los jefes validen</div></div>
+                <Chip tone="amber">+{o.points} XP</Chip>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* PUBLICAR */}
       <Card className="p-4">
@@ -165,7 +206,7 @@ export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
                   </div>
                   <div className="text-right shrink-0">
                     <div className={`text-sm font-bold ${iAmDoer ? "text-teal" : "text-red-500"}`}>{iAmDoer ? "+" : "−"}{o.points} XP</div>
-                    <div className="text-[10px] font-semibold text-slate-400">{st === "open" ? "en tablón" : st === "taken" ? "pendiente" : st === "done" ? "hecho" : st === "cancelled" ? "retirado" : "rechazado"}</div>
+                    <div className="text-[10px] font-semibold text-slate-400">{st === "open" ? "en tablón" : st === "taken" ? "por hacer" : st === "submitted" ? "por validar" : st === "done" ? "hecho" : st === "cancelled" ? "retirado" : "rechazado"}</div>
                   </div>
                 </Card>
               );

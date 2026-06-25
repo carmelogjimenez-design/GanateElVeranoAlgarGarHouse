@@ -13,7 +13,7 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const gif = db.gifts.filter((g) => g.status === "pending");
   const sr = db.study_rewards.filter((r) => r.status === "pending");
   const milo = (db.milo_walks || []).filter((w) => w.status === "pending");
-  const market = (db.market_offers || []).filter((o) => o.status === "taken");
+  const market = (db.market_offers || []).filter((o) => o.status === "submitted");
   const newKids = db.kids.filter((k) => k.user_id && k.status === "pending");
   const call = async (fn: string, args: Record<string, unknown>, msg: string) => {
     const { error } = await rpc(fn, args); flash(error ? error.message : msg); refresh();

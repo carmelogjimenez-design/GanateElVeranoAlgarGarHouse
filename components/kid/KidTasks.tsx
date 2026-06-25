@@ -8,8 +8,8 @@ import { notifyParents } from "@/lib/push";
 import { sfx } from "@/lib/sfx";
 import { sb } from "@/lib/supabase";
 import { missionIcon, freqColor } from "@/lib/icons";
-import type { Ctx, Kid, Assignment } from "@/lib/types";
-import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand, Lock } from "lucide-react";
+import type { Ctx, Kid, Assignment, MarketOffer } from "@/lib/types";
+import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand, Lock, HandHeart } from "lucide-react";
 
 const RECOCHINEO = [
   "Se acabó el tiempo, campeón. Esos puntos volaron 🫡",
@@ -66,6 +66,7 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
     if (!stealMap.has(key)) stealMap.set(key, { a, team: db.teams.find((t) => t.id === owner.team_id) });
   });
   const stealable = [...stealMap.values()];
+  const marketFavors = (db.market_offers || []).filter((o) => o.status === "taken" && (o.kind === "offer" ? o.maker_id : o.taker_id) === me.id);
   const colOf = (a: Assignment) => freqColor(db.tasks.find((t) => t.id === a.task_id)?.frequency || "");
   const mySubjects = db.subjects.filter((s) => s.kid_id === me.id);
   const [photoAsk, setPhotoAsk] = useState<Assignment | null>(null);
@@ -88,6 +89,13 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
     const { error } = await rpc("steal_assignment", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin });
     setBusy(null);
     if (error) { flash(error.message); sfx("reject"); } else { flash("¡Tarea robada! Ahora complétala 😈"); sfx("claim"); refresh(); }
+  };
+
+  const marketDone = async (o: MarketOffer) => {
+    setBusy(o.id);
+    const { error } = await rpc("market_done", { p_offer: o.id, p_kid: me.id, p_pin: kid!.pin });
+    setBusy(null);
+    if (error) { flash(error.message); sfx("reject"); } else { flash("¡Hecho! Lo validan los jefes."); sfx("complete"); refresh(); }
   };
 
   const complete = async (a: Assignment, file?: File | null) => {
@@ -192,6 +200,25 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
           </Card>
         );
       })}
+      {marketFavors.length > 0 && (
+        <div className="pt-1">
+          <div className="flex items-center gap-1.5 px-0.5 mb-2"><HandHeart size={14} style={{ color: "#FF6B5E" }} /><span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#FF6B5E" }}>Favores del mercado</span></div>
+          <div className="space-y-2.5">
+            {marketFavors.map((o) => {
+              const loading = busy === o.id;
+              return (
+                <Card key={o.id} className="p-4" style={{ borderLeft: "4px solid #FF6B5E" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: "#FF6B5E" }}><HandHeart size={20} /></div>
+                    <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">{o.title}</div><div className="text-[11px] text-slate-400 font-medium">Favor del mercado · +{o.points} XP al hacerlo</div></div>
+                    <Btn variant="teal" className="text-sm py-2 flex items-center gap-1.5" disabled={loading} onClick={() => marketDone(o)}><Check size={15} /> Hecho</Btn>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {wait.map((a) => (
         <Card key={a.id} className="p-3.5 flex items-center gap-3">
           <IconTile color="#F59E0B"><Clock size={18} /></IconTile>

@@ -16,7 +16,7 @@ export type Assignment = {
   photo_url: string | null; note: string | null; completed_at: string | null; validated_at: string | null; expired?: boolean; stolen_from_team?: string | null; created_at: string;
 };
 export type Notification = { id: string; kid_id: string; type: string; title: string; body: string; read: boolean; created_at: string };
-export type MarketOffer = { id: string; maker_id: string; taker_id: string | null; kind: "offer" | "request"; title: string; points: number; status: "open" | "taken" | "done" | "rejected" | "cancelled"; created_at: string; closed_at: string | null };
+export type MarketOffer = { id: string; maker_id: string; taker_id: string | null; kind: "offer" | "request"; title: string; points: number; status: "open" | "taken" | "submitted" | "done" | "rejected" | "cancelled"; created_at: string; closed_at: string | null };
 export type Reward = { id: string; title: string; description: string; emoji: string; cost: number; active: boolean; created_at: string };
 export type Redemption = {
   id: string; kid_id: string; reward_id: string | null; title: string; cost: number;
