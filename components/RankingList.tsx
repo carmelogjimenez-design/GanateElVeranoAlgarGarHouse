@@ -32,12 +32,12 @@ export default function RankingList({ db, highlight }: { db: DB; highlight?: str
   const gapUp = ahead && myRow ? ahead.v - myRow.v : 0;
   const lead = myRank === 0 && teamRows[1] && myRow ? myRow.v - teamRows[1].v : 0;
 
-  // Líder de la semana (para el premio de +3 XP del hijo de la semana)
-  const weekRows = [...db.kids].map((k) => ({ k, v: periodXp(k.id, 7) })).sort((a, b) => b.v - a.v);
-  const myWeekIdx = weekRows.findIndex((r) => r.k.id === highlight);
-  const iLeadWeek = weekRows[0] && weekRows[0].k.id === highlight && weekRows[0].v > 0;
-  const weekGap = myWeekIdx > 0 ? weekRows[myWeekIdx - 1].v - weekRows[myWeekIdx].v : 0;
-  const weekAhead = myWeekIdx > 0 ? weekRows[myWeekIdx - 1].k : null;
+  // Líder del ranking que se está viendo (premio "hijo de la semana" = +3 XP)
+  const myIdx = kidRows.findIndex((r) => r.k.id === highlight);
+  const iLead = !!kidRows[0] && kidRows[0].k.id === highlight && kidRows[0].v > 0;
+  const gap = myIdx > 0 ? kidRows[myIdx - 1].v - kidRows[myIdx].v : 0;
+  const kAhead = myIdx > 0 ? kidRows[myIdx - 1].k : null;
+  const periodTxt = tab === "semana" ? "de la semana" : tab === "mes" ? "del mes" : "";
 
   return (
     <div className="pb-6">
@@ -95,22 +95,22 @@ export default function RankingList({ db, highlight }: { db: DB; highlight?: str
         <span className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0" style={{ background: "#A855F71f", color: "#7c3aed" }}>🌟 +3 XP al líder de la semana</span>
       </div>
 
-      {weekRows[0] && weekRows[0].v > 0 && (iLeadWeek ? (
+      {iLead ? (
         <div className="rounded-2xl p-3.5 mb-3 text-white" style={{ background: "linear-gradient(135deg,#FF9F45,#A855F7)", boxShadow: "0 14px 34px -18px rgba(168,85,247,.65)" }}>
           <div className="flex items-center gap-3">
             <div className="text-[26px] leading-none">🌟</div>
             <div className="flex-1 min-w-0">
-              <div className="font-black text-[15px]">¡Vas líder de la semana!</div>
-              <div className="text-[12px] text-white/85 font-medium">Si acabas 1º el domingo, te llevas <b className="text-white">+3 XP</b> de premio. ¡No te despistes! 😏</div>
+              <div className="font-black text-[15px]">{tab === "semana" ? "¡Vas líder de la semana!" : "¡Vas primero! 👑"}</div>
+              <div className="text-[12px] text-white/85 font-medium">{tab === "semana" ? <>Si acabas 1º el domingo, te llevas <b className="text-white">+3 XP</b> de premio. ¡No te despistes! 😏</> : <>El líder de la semana gana <b className="text-white">+3 XP</b>. ¡Sigue así y serás tú! 😏</>}</div>
             </div>
           </div>
         </div>
-      ) : myWeekIdx > 0 ? (
+      ) : myIdx > 0 && kAhead ? (
         <div className="rounded-2xl p-3 mb-3" style={{ background: "#A855F70d", border: "1px solid #A855F722" }}>
-          <div className="text-[13px] font-semibold text-navy">Vas a <b style={{ color: "#7c3aed" }}>{weekGap} pts</b> del líder de la semana{weekAhead ? ` (${weekAhead.name})` : ""} 🔥</div>
-          <div className="text-[12px] text-slate-500 font-medium">Adelántale antes del domingo y te llevas los <b>+3 XP</b>.</div>
+          <div className="text-[13px] font-semibold text-navy">Vas a <b style={{ color: "#7c3aed" }}>{gap} pts</b> del líder {periodTxt} ({kAhead.name}) 🔥</div>
+          <div className="text-[12px] text-slate-500 font-medium">Adelántale y pelea por los <b>+3 XP</b> del líder de la semana.</div>
         </div>
-      ) : null)}
+      ) : null}
 
       <div className="flex gap-1.5 mb-3 bg-slate-100 p-1 rounded-2xl">
         {TABS.map(([k, label]) => (
