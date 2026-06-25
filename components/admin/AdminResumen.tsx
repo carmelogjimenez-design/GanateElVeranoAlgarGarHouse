@@ -1,10 +1,10 @@
 "use client";
-import { Card, Avatar, Bar, Btn, Stat } from "@/components/ui/atoms";
+import { Card, Avatar, Bar } from "@/components/ui/atoms";
 import { last7 } from "@/lib/helpers";
 import { levelOf } from "@/lib/game";
 import type { Ctx, Kid } from "@/lib/types";
 import ActivityWall from "@/components/ActivityWall";
-import { Users, ClipboardCheck, Target, Sparkles, Star, ArrowRight, FlaskConical, Trophy, CalendarDays, CalendarRange, CalendarClock, CalendarCheck } from "lucide-react";
+import { Star, ArrowRight, FlaskConical, Trophy, CalendarDays, CalendarRange, CalendarClock, CalendarCheck } from "lucide-react";
 
 const FREQS: { key: string; label: string; Icon: typeof CalendarDays; color: string }[] = [
   { key: "diaria", label: "Diarias", Icon: CalendarDays, color: "#FF8A00" },
@@ -28,37 +28,64 @@ export default function AdminResumen({ ctx, onGo }: { ctx: Ctx; onGo: (t: string
   const pendByFreq = (f: string) => db.assignments.filter((a) => a.status !== "approved" && db.tasks.find((t) => t.id === a.task_id)?.frequency === f).length;
   const medal = ["#FACC15", "#CBD5E1", "#D8A36B"];
 
+  const heroStats = [
+    { label: "Hijos", value: db.kids.length },
+    { label: "Misiones activas", value: db.tasks.filter((t) => t.active).length },
+    { label: "Puntos en juego", value: xpTotal },
+  ];
+
   return (
     <div className="space-y-5">
-      <Card className="p-4 bg-navy/[0.03] border-navy/10">
-        <div className="flex items-center gap-2 mb-2"><FlaskConical size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight text-sm">Modo test · ver panel de un hijo</h3></div>
+      {/* ===== HÉROE · CENTRO DE MANDO ===== */}
+      <div className="relative overflow-hidden rounded-[26px] p-6 sm:p-7 text-white" style={{ background: "linear-gradient(135deg,#FF6B5E 0%,#FF8A4C 55%,#FF9F45 100%)", boxShadow: "0 24px 60px -24px rgba(255,107,94,.6)" }}>
+        <div className="absolute -top-16 -right-8 w-56 h-56 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,.16)", filter: "blur(6px)" }} />
+        <div className="absolute -bottom-20 -left-10 w-52 h-52 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,.10)", filter: "blur(8px)" }} />
+        <div className="relative">
+          <div className="text-[11px] font-bold tracking-[.2em] uppercase text-white/75">Centro de mando</div>
+          <h2 className="text-2xl sm:text-[28px] font-black tracking-tight mt-1 leading-tight">
+            {pend > 0 ? <>Tienes <span className="tabular-nums">{pend}</span> {pend === 1 ? "cosa" : "cosas"} por validar</> : <>Todo al día <span className="align-middle">✨</span></>}
+          </h2>
+          <p className="text-white/80 text-sm font-medium mt-1.5">{pend > 0 ? "Aprueba o rechaza para que tus hijos sumen sus puntos." : "No hay nada pendiente. Reina la paz… por ahora."}</p>
+
+          <div className="flex flex-wrap items-center gap-2.5 mt-5">
+            {heroStats.map((s) => (
+              <div key={s.label} className="rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,255,255,.15)" }}>
+                <div className="text-xl font-black tabular-nums leading-none">{s.value}</div>
+                <div className="text-[11px] font-semibold text-white/75 mt-1">{s.label}</div>
+              </div>
+            ))}
+            {pend > 0 && (
+              <button onClick={() => onGo("validar")} className="sm:ml-auto flex items-center gap-2 rounded-2xl px-5 py-3 font-bold text-[15px] active:scale-95 transition shadow-lg" style={{ background: "#fff", color: "#FF6B5E" }}>
+                Revisar ahora <ArrowRight size={17} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== MODO TEST (discreto) ===== */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-2.5"><FlaskConical size={15} className="text-brand" /><h3 className="font-bold text-navy tracking-tight text-sm">Modo test · entra como un hijo</h3></div>
         <div className="flex flex-wrap gap-2">
           {db.kids.map((k) => (
-            <button key={k.id} onClick={() => { ctx.setKid(k); ctx.setScreen("kid"); }} className="flex items-center gap-2 text-sm font-semibold px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-navy hover:border-brand">
-              <Avatar name={k.name} color={k.color} size={20} avatar={k.avatar} />{k.name}
+            <button key={k.id} onClick={() => { ctx.setKid(k); ctx.setScreen("kid"); }} className="flex items-center gap-2 text-sm font-semibold pl-1.5 pr-3.5 py-1.5 rounded-full bg-white/70 border border-white/80 text-navy hover:border-brand transition active:scale-95">
+              <Avatar name={k.name} color={k.color} size={22} avatar={k.avatar} />{k.name}
             </button>
           ))}
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat label="Hijos" value={db.kids.length} accent="#3B82F6" icon={<Users size={18} />} />
-        <Stat label="Pendiente de validar" value={pend} accent="#FF8A00" icon={<ClipboardCheck size={18} />} />
-        <Stat label="Misiones activas" value={db.tasks.filter((t) => t.active).length} accent="#19D3AE" icon={<Target size={18} />} />
-        <Stat label="Puntos en juego" value={xpTotal} accent="#A855F7" icon={<Sparkles size={18} />} />
-      </div>
-
-      {/* RANKING DE EQUIPOS — primero */}
+      {/* ===== RANKING DE EQUIPOS ===== */}
       <Card className="p-5">
-        <div className="flex items-center gap-2 mb-4"><Trophy size={18} className="text-brand" /><h3 className="font-bold text-navy tracking-tight">Ranking de equipos</h3></div>
-        <div className="space-y-3">
+        <div className="flex items-center gap-2 mb-4"><Trophy size={18} style={{ color: "#FF9F45" }} /><h3 className="font-bold text-navy tracking-tight">Ranking de equipos</h3></div>
+        <div className="space-y-2.5">
           {teams.map((t, i) => (
-            <div key={t.t.id} className={`flex items-center gap-3 rounded-2xl p-3 ${i === 0 ? "bg-amber-50 border border-amber-200" : "bg-slate-50"}`}>
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center font-extrabold text-white text-sm" style={{ background: i < 3 ? medal[i] : "#94A3B8" }}>{i + 1}</div>
+            <div key={t.t.id} className="flex items-center gap-3 rounded-2xl p-3" style={i === 0 ? { background: "linear-gradient(90deg,rgba(250,204,21,.16),rgba(250,204,21,.03))", border: "1px solid rgba(250,204,21,.45)" } : { background: "rgba(255,255,255,.5)" }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center font-black text-white text-sm shrink-0" style={{ background: i < 3 ? medal[i] : "#94A3B8" }}>{i + 1}</div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="font-bold text-navy flex items-center gap-2 truncate"><span className="w-3 h-3 rounded-full" style={{ background: t.t.color }} />{t.t.name} <span className="text-slate-400 font-medium">· {t.members}</span></span>
-                  <span className="font-extrabold text-navy tabular-nums">{t.points}</span>
+                <div className="flex items-center justify-between text-sm mb-1.5">
+                  <span className="font-bold text-navy flex items-center gap-2 truncate"><span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: t.t.color }} />{t.t.name} <span className="text-slate-400 font-medium">· {t.members}</span></span>
+                  <span className="font-black text-navy tabular-nums">{t.points}</span>
                 </div>
                 <Bar v={t.points} max={teamMax} c={t.t.color} />
               </div>
@@ -68,53 +95,57 @@ export default function AdminResumen({ ctx, onGo }: { ctx: Ctx; onGo: (t: string
         </div>
       </Card>
 
-      {/* MISIONES POR FRECUENCIA */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {FREQS.map((f) => (
-          <Card key={f.key} className="p-4">
-            <div className="flex items-center gap-2 mb-2" style={{ color: f.color }}><f.Icon size={18} /><span className="text-xs font-semibold text-slate-400">{f.label}</span></div>
-            <div className="text-2xl font-extrabold text-navy tabular-nums">{tasksByFreq(f.key)}</div>
-            <div className="text-xs text-slate-400 font-medium mt-0.5">{pendByFreq(f.key)} en curso</div>
-          </Card>
-        ))}
-      </div>
-
-      {/* RANKING INDIVIDUAL + lateral */}
+      {/* ===== INDIVIDUAL + LATERAL ===== */}
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="p-5 lg:col-span-2">
-          <h3 className="font-bold text-navy tracking-tight mb-3">Ranking individual</h3>
-          {ranking.map((k, i) => (
-            <div key={k.id} className="flex items-center gap-3 py-2">
-              <span className={`w-5 text-center text-sm font-bold ${i < 3 ? "text-brand" : "text-slate-300"}`}>{i + 1}</span>
-              <Avatar name={k.name} color={k.color} size={34} avatar={k.avatar} />
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between text-sm"><span className="font-semibold text-navy truncate">{k.name}</span><span className="font-bold text-navy tabular-nums">{k.total_points}</span></div>
-                <div className="mt-1"><Bar v={k.total_points} max={max} c={k.color} /></div>
+          <div className="flex items-center gap-2 mb-3"><Trophy size={18} style={{ color: "#FF6B5E" }} /><h3 className="font-bold text-navy tracking-tight">Ranking individual</h3></div>
+          <div className="space-y-0.5">
+            {ranking.map((k, i) => (
+              <div key={k.id} className="flex items-center gap-3 py-2 px-2 rounded-2xl">
+                <span className={`w-6 text-center text-sm font-black ${i < 3 ? "text-navy" : "text-slate-300"}`}>{i + 1}</span>
+                <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between text-sm mb-1"><span className="font-semibold text-navy truncate">{k.name}</span><span className="font-black text-navy tabular-nums">{k.total_points}</span></div>
+                  <Bar v={k.total_points} max={max} c={k.color} />
+                </div>
+                <span className="text-[11px] text-slate-400 font-semibold shrink-0">Nv {levelOf(k.total_points)}</span>
               </div>
-              <span className="text-xs text-slate-400 font-medium">Nv {levelOf(k.total_points)}</span>
-            </div>
-          ))}
-          {ranking.length === 0 && <p className="text-slate-400 text-sm font-medium text-center py-3">Añade hijos para ver el ranking.</p>}
+            ))}
+            {ranking.length === 0 && <p className="text-slate-400 text-sm font-medium text-center py-3">Añade hijos para ver el ranking.</p>}
+          </div>
         </Card>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           {star && star.w > 0 && (
-            <Card className="bg-navy border-navy p-5 text-white">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-brand/20 text-brand flex items-center justify-center"><Star size={22} /></div>
-                <div className="flex-1"><div className="text-xs opacity-60 font-medium">Hijo de la semana</div><div className="text-xl font-extrabold tracking-tight">{star.k.name}</div></div>
-                <div className="text-right"><div className="text-2xl font-extrabold text-teal">{star.w}</div><div className="text-[11px] opacity-60">pts</div></div>
+            <div className="relative overflow-hidden rounded-[24px] p-5 text-white" style={{ background: "linear-gradient(135deg,#0B1F3A,#15315c)", boxShadow: "0 18px 44px -22px rgba(11,31,58,.55)" }}>
+              <div className="absolute -top-8 -right-6 w-32 h-32 rounded-full pointer-events-none" style={{ background: "rgba(255,159,69,.18)", filter: "blur(6px)" }} />
+              <div className="relative flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,159,69,.2)", color: "#FF9F45" }}><Star size={24} /></div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-bold tracking-[.14em] uppercase text-white/55">Hijo de la semana</div>
+                  <div className="text-xl font-black tracking-tight truncate">{star.k.name}</div>
+                </div>
+                <div className="text-right shrink-0"><div className="text-2xl font-black" style={{ color: "#19D3AE" }}>{star.w}</div><div className="text-[11px] text-white/55">pts</div></div>
               </div>
-            </Card>
+            </div>
           )}
+
           <Card className="p-5">
-            <div className="text-xs font-medium text-slate-400">Cola de validación</div>
-            <div className="text-3xl font-extrabold text-navy mt-1">{pend}</div>
-            <Btn variant="primary" className="w-full mt-3 flex items-center justify-center gap-2" onClick={() => onGo("validar")}>Revisar ahora <ArrowRight size={16} /></Btn>
+            <h3 className="font-bold text-navy tracking-tight mb-3.5">Catálogo por frecuencia</h3>
+            <div className="space-y-3">
+              {FREQS.map((f) => (
+                <div key={f.key} className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${f.color}1a`, color: f.color }}><f.Icon size={17} /></div>
+                  <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-navy">{f.label}</div><div className="text-[11px] text-slate-400 font-medium">{pendByFreq(f.key)} en curso</div></div>
+                  <div className="text-lg font-black text-navy tabular-nums">{tasksByFreq(f.key)}</div>
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
       </div>
-      <div className="mt-6"><ActivityWall ctx={ctx} author="Papá / Mamá" /></div>
+
+      <ActivityWall ctx={ctx} author="Papá / Mamá" />
     </div>
   );
 }
