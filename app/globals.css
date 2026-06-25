@@ -47,3 +47,12 @@ body {
 .kid-blob{position:fixed;border-radius:50%;filter:blur(72px);z-index:0;opacity:.5;pointer-events:none}
 .gev-sheen{position:relative;overflow:hidden}
 .gev-sheen::after{content:"";position:absolute;top:0;bottom:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:gevSheen 3.4s ease-in-out infinite}
+
+/* ===== ADMIN SKIN · mismo verano cálido, tarjetas de cristal ===== */
+.adminskin .gev-card{
+  background:rgba(255,255,255,.66);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:24px;
+  box-shadow:0 16px 40px -20px rgba(255,107,94,.30), 0 2px 10px -5px rgba(13,31,58,.08);
+}
