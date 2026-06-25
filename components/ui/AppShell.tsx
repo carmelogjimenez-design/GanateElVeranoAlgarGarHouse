@@ -118,7 +118,7 @@ export function AppShell({
             </div>
           </div>
         )}
-        <nav className="md:hidden fixed bottom-3 inset-x-3 z-30 rounded-3xl"
+        <nav className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-md z-30 rounded-3xl"
           style={{ background: "rgba(255,255,255,.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,.8)", boxShadow: "0 14px 40px -12px rgba(255,107,94,.35)" }}>
           <div className="flex p-1.5">
             {primary.map(({ key, label, Icon }) => {

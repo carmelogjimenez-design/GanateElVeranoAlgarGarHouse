@@ -97,7 +97,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
       </div>
       <div className="relative z-10">
       <header className="sticky top-0 z-20" style={{ background: "rgba(255,255,255,.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: "1px solid rgba(255,255,255,.6)" }}>
-        <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center gap-2">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-2">
           <img src="/logo.png" alt="Gánate el Verano" className="w-10 h-10 rounded-xl object-contain shrink-0 gev-wiggle" />
           <div className="flex-1 min-w-0">
             <div className="font-black text-navy tracking-tight leading-none text-lg truncate">¡Hola, {me.name}!</div>
@@ -118,20 +118,20 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 md:px-8 py-5">
+      <main className="max-w-2xl mx-auto px-4 py-5">
         {dxp && <div className="mb-4 rounded-xl px-3 py-2.5 text-sm font-bold text-white flex items-center gap-2" style={{ background: "linear-gradient(90deg,#FF8A00,#EAB308)" }}><Zap size={16} /> {dxp.title} · ¡x{dxp.multiplier} en tus misiones!</div>}
         {isAdmin && <div className="mb-4 bg-navy/5 border border-navy/10 rounded-xl px-3 py-2 text-xs font-semibold text-navy flex items-center justify-between"><span>🧪 Modo test (superadmin): estás viendo el panel de {me.name}</span><button onClick={() => setScreen("admin")} className="text-brand">Volver a padres</button></div>}
         {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} />}
-        {tab === "tareas" && <div className="max-w-2xl"><KidTasks ctx={ctx} me={me} asg={myAsg} onTab={setTab} /></div>}
-        {tab === "estudio" && <div className="max-w-2xl"><KidStudy ctx={ctx} me={me} /></div>}
-        {tab === "ranking" && <div className="max-w-2xl"><RankingList db={db} highlight={me.id} /></div>}
+        {tab === "tareas" && <KidTasks ctx={ctx} me={me} asg={myAsg} onTab={setTab} />}
+        {tab === "estudio" && <KidStudy ctx={ctx} me={me} />}
+        {tab === "ranking" && <RankingList db={db} highlight={me.id} />}
         {tab === "tienda" && <KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} />}
       </main>
 
       <Footer />
 
-      <nav className="fixed bottom-3 inset-x-3 z-30 rounded-3xl" style={{ background: "rgba(255,255,255,.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,.8)", boxShadow: "0 14px 40px -12px rgba(255,107,94,.35)" }}>
-        <div className="max-w-2xl mx-auto flex p-1.5">
+      <nav className="fixed bottom-3 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] max-w-2xl z-30 rounded-3xl" style={{ background: "rgba(255,255,255,.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,.8)", boxShadow: "0 14px 40px -12px rgba(255,107,94,.35)" }}>
+        <div className="flex p-1.5">
           {nav.map(([k, label, Icon]) => {
             const on = tab === k;
             return (

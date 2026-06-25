@@ -51,7 +51,7 @@ export default function AdminAnalytics({ ctx }: { ctx: Ctx }) {
   );
 
   return (
-    <div className="space-y-5 pb-6 max-w-5xl">
+    <div className="space-y-5 pb-6">
       <div className="flex flex-wrap gap-2 justify-end">
         <Btn variant="teal" className="flex items-center gap-2 text-sm py-2.5" onClick={exportXlsx}><FileSpreadsheet size={16} /> Exportar Excel</Btn>
         <Btn variant="dark" className="flex items-center gap-2 text-sm py-2.5" onClick={exportPdf}><FileText size={16} /> Exportar PDF</Btn>

@@ -16,7 +16,7 @@ const SECTIONS = [
 
 export default function AdminHelp() {
   return (
-    <div className="max-w-3xl pb-6">
+    <div className="pb-6">
       <Card className="p-5 mb-4" >
         <div className="flex items-center gap-2 mb-1"><HelpCircle size={18} className="text-brand" /><h3 className="font-bold text-navy tracking-tight">Cómo funciona el juego</h3></div>
         <p className="text-sm text-slate-400 font-medium">Una guía rápida de cada sección del panel. La idea es simple: los hijos hacen tareas y estudian → ganan XP → tú validas → suben en el ranking y se ganan el verano.</p>

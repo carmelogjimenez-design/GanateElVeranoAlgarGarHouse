@@ -66,7 +66,7 @@ export default function AdminSettings({ ctx }: { ctx: Ctx }) {
     flash(error ? error.message : "Hecho · puntos e historial a cero y misiones reseteadas"); refresh();
   };
   return (
-    <div className="max-w-2xl space-y-4 pb-6">
+    <div className="space-y-4 pb-6">
       <AdminAccounts />
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-3"><UserCog size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight">Tu perfil</h3></div>
