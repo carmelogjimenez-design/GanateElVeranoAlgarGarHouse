@@ -16,7 +16,8 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const today = todayStr();
   const walks = db.milo_walks || [];
   const todays = walks.filter((w) => w.day === today);
-  const doneToday = todays.filter((w) => w.status === "done").length;
+  const doneToday = todays.filter((w) => ["pending", "approved", "done"].includes(w.status)).length;
+  const pendingReview = todays.some((w) => w.status === "pending");
   const active = walks.find((w) => w.status === "in_progress") || null;
   const activeKid = active ? db.kids.find((k) => k.id === active.kid_id) : null;
 
@@ -71,7 +72,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
     setBusy(false);
     if (error) { flash(error.message); sfx("reject"); return; }
     sfx("complete"); setShareFile(file); setDone({ mins, pts });
-    flash(pts > 0 ? `¡Paseo completado! +${pts} pts · ${mins} min` : `Paseo de ${mins} min (muy corto para puntuar)`); refresh();
+    flash(pts > 0 ? `Paseo enviado (${mins} min · +${pts} pts) · lo validan los padres` : `Paseo de ${mins} min (muy corto para puntuar)`); refresh();
   };
 
   const shareWhatsApp = async (file: File | null) => {
@@ -111,6 +112,10 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
         {doneToday >= 2 ? "¡Hecho! Milo ya ha salido 2 veces hoy. Cualquier paseo extra suma igual." : `Hay que sacarle MÍNIMO 2 veces al día para que TODOS podáis jugar. Faltan ${2 - doneToday}.`}
       </div>
 
+      {pendingReview && (
+        <div className="rounded-xl px-3 py-2 text-xs font-semibold mb-3 bg-amber-50 text-amber-700">🕒 Tienes un paseo en revisión por los padres.</div>
+      )}
+
       <button onClick={() => setShowRules((v) => !v)} className="w-full flex items-center justify-between text-sm font-bold text-navy/70 mb-2">
         <span className="flex items-center gap-1.5"><Footprints size={15} /> ¿Cómo funciona? (léelo para no liarla)</span>
         <ChevronDown size={16} className={`transition ${showRules ? "rotate-180" : ""}`} />
@@ -120,7 +125,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
           <p>1️⃣ Pulsa <b>«Salgo con Milo»</b> y haz una <b>foto al salir</b>. El cronómetro arranca solo.</p>
           <p>2️⃣ Cuando vuelvas, pulsa <b>«He vuelto»</b> y haz una <b>foto al entrar</b>. ⚠️ Son <b>DOS pulsaciones</b>: una al salir y otra al volver.</p>
           <p>3️⃣ Los puntos dependen del tiempo: <b>20 min → 1</b> · <b>35 min → 2</b> · <b>1 h → 3</b> · <b>1 h 30 → 5</b>.</p>
-          <p>4️⃣ <b>Envía la foto al grupo de WhatsApp</b> de la familia para que el paseo sea válido. 📲</p>
+          <p>4️⃣ <b>Envía la foto al grupo de WhatsApp</b> de la familia. 📲 Después, <b>los padres validan</b> el paseo y se suman los puntos.</p>
         </div>
       )}
 
@@ -153,7 +158,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
       )}
 
       {done && (
-        <div className="mt-3 text-center text-sm font-bold text-teal">Paseo de {done.mins} min{done.pts > 0 ? ` · +${done.pts} pts` : ""}</div>
+        <div className="mt-3 text-center text-sm font-bold text-teal">Enviado · {done.mins} min{done.pts > 0 ? ` · +${done.pts} pts si lo validan los padres` : " (muy corto para puntuar)"}</div>
       )}
       {shareFile && (
         <button onClick={() => shareWhatsApp(shareFile)} className="mt-2 w-full font-bold rounded-xl px-4 py-3 text-sm flex items-center justify-center gap-2 active:scale-95 transition" style={{ background: "#25D366", color: "#fff" }}>

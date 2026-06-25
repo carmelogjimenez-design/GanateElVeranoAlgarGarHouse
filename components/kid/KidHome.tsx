@@ -14,6 +14,7 @@ import { sfx } from "@/lib/sfx";
 import { confetti } from "@/lib/confetti";
 import PlayerCard from "@/components/PlayerCard";
 import CarnetCard from "@/components/CarnetCard";
+import MiloCard from "@/components/kid/MiloCard";
 import ActivityWall from "@/components/ActivityWall";
 import type { Ctx, Kid } from "@/lib/types";
 import {
@@ -92,6 +93,11 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
       <div className="gev-rise" style={{ animationDelay: ".05s" }}>
         <CarnetCard kid={me} db={db} onClick={openCard} />
         <div className="text-center text-[10px] font-bold text-navy/35 mt-1.5 uppercase tracking-wider">Toca tu carnet para ver tu carta</div>
+      </div>
+
+      {/* MILO (tarea especial, también en inicio) */}
+      <div className="gev-rise" style={{ animationDelay: ".08s" }}>
+        <MiloCard ctx={ctx} me={me} />
       </div>
 
       {/* HERO GRID */}

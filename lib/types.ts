@@ -38,7 +38,7 @@ export type TaskTarget = { id: string; task_id: string; kid_id: string; created_
 export type Badge = { code: string; name: string; description: string; icon: string; color: string; sort: number };
 export type KidBadge = { id: string; kid_id: string; badge_code: string; earned_at: string };
 
-export type MiloWalk = { id: string; kid_id: string | null; day: string; started_at: string; start_photo: string | null; ended_at: string | null; end_photo: string | null; minutes: number | null; points: number | null; status: "in_progress" | "done"; created_at: string };
+export type MiloWalk = { id: string; kid_id: string | null; day: string; started_at: string; start_photo: string | null; ended_at: string | null; end_photo: string | null; minutes: number | null; points: number | null; status: "in_progress" | "pending" | "approved" | "rejected" | "done"; created_at: string };
 
 export type DB = {
   teams: Team[]; kids: Kid[]; tasks: Task[]; assignments: Assignment[];

@@ -12,12 +12,13 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const red = db.redemptions.filter((r) => r.status === "pending");
   const gif = db.gifts.filter((g) => g.status === "pending");
   const sr = db.study_rewards.filter((r) => r.status === "pending");
+  const milo = (db.milo_walks || []).filter((w) => w.status === "pending");
   const newKids = db.kids.filter((k) => k.user_id && k.status === "pending");
   const call = async (fn: string, args: Record<string, unknown>, msg: string) => {
     const { error } = await rpc(fn, args); flash(error ? error.message : msg); refresh();
   };
   const [view, setView] = useState<"pendiente" | "historico">("pendiente");
-  const pendingCount = asg.length + red.length + gif.length + sr.length + newKids.length;
+  const pendingCount = asg.length + red.length + gif.length + sr.length + milo.length + newKids.length;
   const nothingPending = pendingCount === 0;
   const hist = db.assignments
     .filter((a) => a.status === "approved" || a.status === "rejected")
@@ -107,6 +108,30 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
                 <div className="flex gap-2">
                   <Btn variant="teal" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("approve_assignment", { p_assignment: a.id }, "Validada. +" + a.points + " XP")}><Check size={16} /> Validar</Btn>
                   <Btn variant="ghost" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => { const p = prompt("Penalización en XP (0 = ninguna):", "0"); call("reject_assignment", { p_assignment: a.id, p_penalty: +(p || 0) }, "Rechazada."); }}><X size={16} /> Rechazar</Btn>
+                </div>
+              </Card>
+            );
+          })}
+        </Section>
+      )}
+      {milo.length > 0 && (
+        <Section title="Paseos de Milo">
+          {milo.map((w) => {
+            const k = kidOf(w.kid_id);
+            return (
+              <Card key={w.id} className="p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  {k && <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />}
+                  <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">🐶 Paseo de Milo · {w.minutes ?? 0} min</div><div className="text-xs text-slate-400">{k?.name}</div></div>
+                  <Chip tone="brand">+{w.points ?? 0} XP</Chip>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div><div className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Salida</div>{w.start_photo ? <a href={w.start_photo} target="_blank" rel="noreferrer"><img src={w.start_photo} alt="salida" className="w-full h-28 object-cover rounded-xl" /></a> : <div className="w-full h-28 rounded-xl bg-slate-100 flex items-center justify-center text-xs text-slate-300">sin foto</div>}</div>
+                  <div><div className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Vuelta</div>{w.end_photo ? <a href={w.end_photo} target="_blank" rel="noreferrer"><img src={w.end_photo} alt="vuelta" className="w-full h-28 object-cover rounded-xl" /></a> : <div className="w-full h-28 rounded-xl bg-slate-100 flex items-center justify-center text-xs text-slate-300">sin foto</div>}</div>
+                </div>
+                <div className="flex gap-2">
+                  <Btn variant="teal" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("approve_milo", { p_walk: w.id }, "Paseo validado · +" + (w.points ?? 0) + " XP")}><Check size={16} /> Validar</Btn>
+                  <Btn variant="ghost" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("reject_milo", { p_walk: w.id }, "Paseo rechazado")}><X size={16} /> Rechazar</Btn>
                 </div>
               </Card>
             );
