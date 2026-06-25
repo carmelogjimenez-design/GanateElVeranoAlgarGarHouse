@@ -199,16 +199,16 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
           {/* Medallas */}
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3"><h3 className="font-bold text-navy tracking-tight">Tus medallas</h3><button onClick={() => setShowBadges(true)} className="text-sm font-semibold text-brand">Ver todas</button></div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-2.5">
               {homeFour.map((b) => {
                 const Icon = badgeIcon(b.icon);
                 const on = earned.has(b.code);
                 return (
-                  <div key={b.code} className="flex flex-col items-center" title={b.name}>
-                    <div className={`relative w-14 h-14 rounded-2xl flex items-center justify-center ${on ? "text-white" : "text-slate-300 bg-slate-100"}`} style={on ? { background: `linear-gradient(135deg,${b.color},${b.color}bb)`, boxShadow: `0 6px 16px -4px ${b.color}99` } : { filter: "grayscale(1)" }}>
-                      <Icon size={24} />
-                      <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-sm" style={{ background: on ? "#fff" : "#E2E8F0" }}>
-                        {on ? <Check size={11} className="text-green-500" strokeWidth={3} /> : <Lock size={10} className="text-slate-400" />}
+                  <div key={b.code} className="flex flex-col items-center min-w-0 w-full" title={b.name}>
+                    <div className={`relative aspect-square w-full max-w-[52px] rounded-2xl flex items-center justify-center ${on ? "text-white" : "text-slate-300 bg-slate-100"}`} style={on ? { background: `linear-gradient(135deg,${b.color},${b.color}bb)`, boxShadow: `0 6px 16px -4px ${b.color}99` } : { filter: "grayscale(1)" }}>
+                      <Icon size={22} />
+                      <span className="absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full flex items-center justify-center shadow-sm" style={{ background: on ? "#fff" : "#E2E8F0" }}>
+                        {on ? <Check size={10} className="text-green-500" strokeWidth={3} /> : <Lock size={9} className="text-slate-400" />}
                       </span>
                     </div>
                     <span className="text-[10px] font-semibold text-slate-400 mt-1.5 text-center leading-tight w-full truncate">{b.name}</span>
