@@ -29,7 +29,8 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [celeb, setCeleb] = useState<Celeb | null>(null);
-  const [tut, setTut] = useState(true);
+  const [tut, setTut] = useState(false);
+  useEffect(() => { try { if (!localStorage.getItem(`gev_tut_${me.id}`)) setTut(true); } catch {} }, [me.id]);
   const [muted, setMutedState] = useState(false);
   const myAsg = db.assignments.filter((a) => a.kid_id === me.id);
   const bell = myAsg.filter((a) => a.status === "pending").length;
@@ -91,7 +92,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
 
   return (
     <>
-      {tut && <TutorialKid kidName={me.name} onClose={() => setTut(false)} />}
+      {tut && <TutorialKid kidName={me.name} onClose={() => { setTut(false); try { localStorage.setItem(`gev_tut_${me.id}`, "1"); } catch {} }} />}
     <div className="kidskin min-h-screen pb-28 relative">
       <div className="kid-canvas">
         <div className="kid-bg" />
