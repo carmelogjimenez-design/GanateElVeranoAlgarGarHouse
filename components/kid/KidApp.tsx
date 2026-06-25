@@ -15,7 +15,7 @@ import Celebration from "@/components/Celebration";
 import Footer from "@/components/Footer";
 import TutorialKid from "@/components/kid/TutorialKid";
 import type { Ctx } from "@/lib/types";
-import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap, Volume2, VolumeX } from "lucide-react";
+import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap, Volume2, VolumeX, Clock } from "lucide-react";
 import { isMuted, setMuted } from "@/lib/sfx";
 import { dadSpeak } from "@/lib/voice";
 
@@ -28,6 +28,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const [tab, setTab] = useState("inicio");
   const [mercado, setMercado] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [celeb, setCeleb] = useState<Celeb | null>(null);
   const [tut, setTut] = useState(true);
   const [muted, setMutedState] = useState(false);
@@ -110,7 +111,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
           <button onClick={toggleMute} title={muted ? "Activar sonido" : "Silenciar"} className="w-9 h-9 rounded-full bg-white/60 hidden sm:flex items-center justify-center text-navy/60 active:scale-90 transition shrink-0">
             {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
           </button>
-          <button className="relative w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60 shrink-0">
+          <button onClick={() => setNotifOpen(true)} title="Notificaciones" className="relative w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60 active:scale-90 transition shrink-0">
             <Bell size={17} />{bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
           </button>
           <button onClick={() => setAvatarOpen(true)} title="Cambiar avatar" className="active:scale-90 transition shrink-0"><Avatar name={me.name} color={me.color} size={36} avatar={me.avatar} /></button>
@@ -144,6 +145,37 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
       </nav>
 
       {mercado && <Modal title="Mercado de hermanos" onClose={() => setMercado(false)}><KidMarket ctx={ctx} me={me} /></Modal>}
+
+      {notifOpen && (
+        <Modal title="Notificaciones" onClose={() => setNotifOpen(false)}>
+          {(() => {
+            const pend = myAsg.filter((a) => a.status === "pending");
+            if (pend.length === 0)
+              return (
+                <div className="flex flex-col items-center text-center py-8">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300 mb-3"><Bell size={26} /></div>
+                  <p className="font-bold text-navy">Sin novedades</p>
+                  <p className="text-sm text-slate-400 font-medium mt-1">Cuando entregues una misión, aquí verás si está en revisión.</p>
+                </div>
+              );
+            return (
+              <div className="space-y-2.5">
+                <p className="text-sm text-slate-500 font-medium mb-1">Tienes <b className="text-navy">{pend.length}</b> {pend.length === 1 ? "misión" : "misiones"} esperando que los jefes validen:</p>
+                {pend.map((a) => (
+                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-2xl bg-amber-50 border border-amber-100">
+                    <div className="w-9 h-9 rounded-xl bg-amber-400/20 flex items-center justify-center text-amber-500 shrink-0"><Clock size={18} /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-navy text-sm truncate">{a.title || "Misión"}</div>
+                      <div className="text-xs text-amber-600 font-medium">En revisión · +{a.points} pts cuando la validen</div>
+                    </div>
+                  </div>
+                ))}
+                <button onClick={() => { setNotifOpen(false); setTab("tareas"); }} className="w-full mt-1 py-3 rounded-2xl font-bold text-white active:scale-95 transition" style={{ background: "linear-gradient(135deg,#FF6B5E,#FF9F45)" }}>Ver mis misiones</button>
+              </div>
+            );
+          })()}
+        </Modal>
+      )}
 
       {avatarOpen && (
         <Modal title="Elige tu avatar" onClose={() => setAvatarOpen(false)}>
