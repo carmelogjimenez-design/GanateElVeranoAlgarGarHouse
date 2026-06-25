@@ -10,7 +10,15 @@ import { missionIcon, freqColor } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
 import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand } from "lucide-react";
 
-export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Assignment[] }) {
+const EPIC = [
+  "Sé un hijo top, ejemplar. Ponte al servicio de los demás: vivimos para morir y morimos para vivir.",
+  "El que ayuda sin que se lo pidan es el verdadero crack de la casa.",
+  "Pequeñas acciones, gran corazón. Hoy has sido ejemplo para tus hermanos.",
+  "Haz el bien y no mires a quién. La casa entera es mejor contigo.",
+  "Hoy sumaste; mañana, más. Así se forja una leyenda.",
+];
+
+export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; asg: Assignment[]; onTab?: (t: string) => void }) {
   const { db, flash, refresh, kid } = ctx;
   const [busy, setBusy] = useState<string | null>(null);
   const [tutor, setTutor] = useState(false);
@@ -20,6 +28,15 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
   const today = todayStr();
   const openAsg = db.assignments.filter((a) => !a.kid_id && a.status === "open" && a.due_date === today);
   const colOf = (a: Assignment) => freqColor(db.tasks.find((t) => t.id === a.task_id)?.frequency || "");
+  const mySubjects = db.subjects.filter((s) => s.kid_id === me.id);
+  const [photoAsk, setPhotoAsk] = useState<Assignment | null>(null);
+  const [nextAsk, setNextAsk] = useState<{ kind: "mission" | "study" | "phrase"; next?: Assignment; phrase?: string } | null>(null);
+  const openNext = (justDone: Assignment) => {
+    const remaining = asg.filter((x) => x.id !== justDone.id && ["todo", "rejected"].includes(x.status));
+    if (remaining.length) setNextAsk({ kind: "mission", next: remaining[0] });
+    else if (me.study_enabled && mySubjects.length) setNextAsk({ kind: "study" });
+    else setNextAsk({ kind: "phrase", phrase: pick(EPIC) });
+  };
   const claim = async (a: Assignment) => {
     setBusy(a.id);
     const { error } = await rpc("claim_mission", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin });
@@ -38,7 +55,7 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
     }
     const { error } = await rpc("mark_done", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin, p_photo: url });
     setBusy(null);
-    if (error) { flash(error.message); sfx("reject"); } else { flash(pick(COPY.done)); sfx("complete"); notifyParents("Gánate el Verano", `${me.name} ha completado: ${a.title}`); refresh(); }
+    if (error) { flash(error.message); sfx("reject"); } else { flash(pick(COPY.done)); sfx("complete"); notifyParents("Gánate el Verano", `${me.name} ha completado: ${a.title}`); refresh(); openNext(a); }
   };
 
   return (
@@ -84,11 +101,9 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
                   : <div className="flex items-center gap-2"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}</div>}
               </div>
               {a.photo_required ? (
-                <label className={`bg-brand text-white font-semibold rounded-xl px-3 py-2.5 text-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition ${loading ? "opacity-50" : ""}`}>
-                  <Camera size={16} /> Foto
-                  <input type="file" accept="image/*" capture="environment" hidden disabled={loading}
-                    onChange={(e) => e.target.files?.[0] && complete(a, e.target.files[0])} />
-                </label>
+                <Btn variant="primary" className="text-sm py-2.5 px-3 flex items-center gap-1.5" disabled={loading} onClick={() => setPhotoAsk(a)}>
+                  <Camera size={16} /> Completar
+                </Btn>
               ) : (
                 <div className="flex items-center gap-2">
                   <label className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center cursor-pointer" title="Adjuntar foto">
@@ -119,8 +134,51 @@ export default function KidTasks({ ctx, me, asg }: { ctx: Ctx; me: Kid; asg: Ass
         </Card>
       ))}
 
+      {photoAsk && <PhotoReminderModal a={photoAsk} onClose={() => setPhotoAsk(null)} onComplete={(f) => complete(photoAsk, f)} />}
+      {nextAsk && <NextActionModal data={nextAsk} onClose={() => setNextAsk(null)} onGoStudy={() => onTab?.("estudio")} />}
       {tutor && <TutorModal ctx={ctx} me={me} onClose={() => setTutor(false)} />}
     </div>
+  );
+}
+
+function PhotoReminderModal({ a, onClose, onComplete }: { a: Assignment; onClose: () => void; onComplete: (f?: File | null) => void }) {
+  return (
+    <Modal title="¿Subes la foto?" onClose={onClose}>
+      <p className="text-sm text-navy/60 font-medium mb-4">La misión <b className="text-navy">{a.title}</b> pide una <b className="text-navy">foto como prueba</b>. ¿Seguro que no quieres subirla? Con foto es mucho más fácil que te la validen.</p>
+      <label className="w-full mb-2 bg-brand text-white font-bold rounded-xl px-4 py-3 text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition">
+        <Camera size={17} /> Subir foto ahora
+        <input type="file" accept="image/*" capture="environment" hidden onChange={(e) => { if (e.target.files?.[0]) { onComplete(e.target.files[0]); onClose(); } }} />
+      </label>
+      <button onClick={() => { onComplete(null); onClose(); }} className="w-full text-sm font-semibold text-slate-400 hover:text-navy py-2.5">Enviar sin foto igualmente</button>
+    </Modal>
+  );
+}
+
+function NextActionModal({ data, onClose, onGoStudy }: { data: { kind: "mission" | "study" | "phrase"; next?: Assignment; phrase?: string }; onClose: () => void; onGoStudy: () => void }) {
+  return (
+    <Modal title="¡Acción enviada!" onClose={onClose}>
+      {data.kind === "mission" && (
+        <div className="space-y-3">
+          <p className="text-sm text-navy/70 font-medium">Aún te queda una misión obligatoria: <b className="text-navy">{data.next?.title}</b>. ¿Vas a por ella y rematas el día?</p>
+          <Btn variant="primary" className="w-full" onClick={onClose}>¡Sí, vamos a por ella!</Btn>
+          <button onClick={onClose} className="w-full text-sm font-semibold text-slate-400 hover:text-navy py-1.5">Ahora no</button>
+        </div>
+      )}
+      {data.kind === "study" && (
+        <div className="space-y-3">
+          <p className="text-sm text-navy/70 font-medium">¡No te queda ninguna misión pendiente! ¿Aprovechas para <b className="text-navy">estudiar</b> un rato y sumar todavía más?</p>
+          <Btn variant="teal" className="w-full flex items-center justify-center gap-2" onClick={() => { onGoStudy(); onClose(); }}>Ir a estudiar</Btn>
+          <button onClick={onClose} className="w-full text-sm font-semibold text-slate-400 hover:text-navy py-1.5">Luego</button>
+        </div>
+      )}
+      {data.kind === "phrase" && (
+        <div className="text-center space-y-3">
+          <div className="text-5xl">🌟</div>
+          <p className="text-navy font-semibold leading-relaxed px-2">{data.phrase}</p>
+          <Btn variant="primary" className="w-full" onClick={onClose}>¡A por todas!</Btn>
+        </div>
+      )}
+    </Modal>
   );
 }
 

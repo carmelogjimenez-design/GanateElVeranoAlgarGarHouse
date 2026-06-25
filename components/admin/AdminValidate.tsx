@@ -1,8 +1,9 @@
 "use client";
+import { useState } from "react";
 import { Card, Chip, Btn, Section, Avatar } from "@/components/ui/atoms";
 import { rpc } from "@/lib/helpers";
-import type { Ctx } from "@/lib/types";
-import { Check, X } from "lucide-react";
+import type { Ctx, Assignment } from "@/lib/types";
+import { Check, X, RotateCcw } from "lucide-react";
 
 export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const { db, refresh, flash } = ctx;
@@ -15,10 +16,62 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const call = async (fn: string, args: Record<string, unknown>, msg: string) => {
     const { error } = await rpc(fn, args); flash(error ? error.message : msg); refresh();
   };
-  if (!asg.length && !red.length && !gif.length && !sr.length && !newKids.length)
-    return <Card className="p-8 text-center text-slate-400 font-medium">Nada pendiente. Reina la paz… por ahora.</Card>;
+  const [view, setView] = useState<"pendiente" | "historico">("pendiente");
+  const pendingCount = asg.length + red.length + gif.length + sr.length + newKids.length;
+  const nothingPending = pendingCount === 0;
+  const hist = db.assignments
+    .filter((a) => a.status === "approved" || a.status === "rejected")
+    .sort((x, y) => (y.validated_at || y.completed_at || y.created_at || "").localeCompare(x.validated_at || x.completed_at || x.created_at || ""))
+    .slice(0, 80);
+  const revert = async (a: Assignment) => {
+    const k = kidOf(a.kid_id);
+    const p = prompt(`Anular "${a.title}" de ${k?.name || "el hijo"}.\nSe le quitan los puntos que ganó.\n\n¿Penalización EXTRA en XP? (0 = solo quitar lo ganado):`, "0");
+    if (p === null) return;
+    await call("revert_assignment", { p_assignment: a.id, p_penalty: +(p || 0) }, "Anulada · puntos retirados");
+  };
+  const PILL_ON = "flex-1 py-2 rounded-xl text-sm font-bold bg-navy text-white";
+  const PILL_OFF = "flex-1 py-2 rounded-xl text-sm font-bold bg-white border border-slate-200 text-navy";
+  const fecha = (a: Assignment) => new Date(a.validated_at || a.completed_at || a.created_at).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   return (
-    <div className="space-y-5 pb-6">
+    <div className="space-y-4 pb-6">
+      <div className="flex gap-2">
+        <button onClick={() => setView("pendiente")} className={view === "pendiente" ? PILL_ON : PILL_OFF}>Pendiente{pendingCount > 0 ? ` · ${pendingCount}` : ""}</button>
+        <button onClick={() => setView("historico")} className={view === "historico" ? PILL_ON : PILL_OFF}>Histórico</button>
+      </div>
+
+      {view === "historico" && (
+        <div className="space-y-2.5">
+          {hist.length === 0 && <Card className="p-8 text-center text-slate-400 font-medium">Aún no hay nada validado.</Card>}
+          {hist.map((a) => {
+            const k = kidOf(a.kid_id);
+            const okd = a.status === "approved";
+            return (
+              <Card key={a.id} className="p-3.5">
+                <div className="flex items-center gap-3">
+                  {k && <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-navy truncate">{a.title}</div>
+                    <div className="text-xs text-slate-400 truncate">{k?.name} · {fecha(a)}{a.note ? ` · "${a.note}"` : ""}</div>
+                  </div>
+                  {okd ? <Chip tone="green">+{a.points} XP</Chip> : <Chip tone="slate">rechazada</Chip>}
+                </div>
+                {a.photo_url && <a href={a.photo_url} target="_blank" rel="noreferrer"><img src={a.photo_url} alt="evidencia" className="w-full h-32 object-cover rounded-xl mt-3" /></a>}
+                {okd && (
+                  <button onClick={() => revert(a)} className="mt-2.5 w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-red-500 hover:bg-red-50 rounded-xl py-2 transition">
+                    <RotateCcw size={15} /> Anular (mintió) y quitar puntos
+                  </button>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {view === "pendiente" && nothingPending && (
+        <Card className="p-8 text-center text-slate-400 font-medium">Nada pendiente. Reina la paz… por ahora.</Card>
+      )}
+      {view === "pendiente" && !nothingPending && (
+      <div className="space-y-5">
       {newKids.length > 0 && (
         <Section title="Nuevos hijos por autorizar">
           {newKids.map((k) => (
@@ -113,6 +166,8 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
             );
           })}
         </Section>
+      )}
+      </div>
       )}
     </div>
   );
