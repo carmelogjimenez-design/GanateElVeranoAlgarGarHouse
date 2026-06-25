@@ -1,15 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, Chip, Btn, IconTile, Modal } from "@/components/ui/atoms";
 import MiloCard from "@/components/kid/MiloCard";
 import { COPY, pick } from "@/lib/copy";
-import { rpc, todayStr } from "@/lib/helpers";
+import { rpc, todayStr, cooldownMs, fmtCountdown } from "@/lib/helpers";
 import { notifyParents } from "@/lib/push";
 import { sfx } from "@/lib/sfx";
 import { sb } from "@/lib/supabase";
 import { missionIcon, freqColor } from "@/lib/icons";
 import type { Ctx, Kid, Assignment } from "@/lib/types";
-import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand } from "lucide-react";
+import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand, Lock } from "lucide-react";
 
 const RECOCHINEO = [
   "Se acabó el tiempo, campeón. Esos puntos volaron 🫡",
@@ -37,7 +37,22 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
   const wait = asg.filter((a) => a.status === "pending");
   const done = asg.filter((a) => a.status === "approved");
   const today = todayStr();
-  const openAsg = db.assignments.filter((a) => !a.kid_id && a.status === "open" && a.due_date === today);
+  const openAsg = db.assignments.filter((a) => !a.kid_id && a.status === "open");
+  const freqOf = (a: Assignment) => db.tasks.find((t) => t.id === a.task_id)?.frequency || "";
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const id = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(id); }, []);
+  // Misiones congeladas: hechas y aún en cooldown (no se pueden repetir hasta que vuelvan)
+  const frozenMap = new Map<string, { a: Assignment; until: number }>();
+  done.forEach((a) => {
+    if (!a.task_id) return;
+    const cd = cooldownMs(freqOf(a));
+    if (cd <= 0) return;
+    const until = new Date(a.validated_at || a.completed_at || a.created_at || Date.now()).getTime() + cd;
+    if (until <= now) return;
+    const prev = frozenMap.get(a.task_id);
+    if (!prev || until > prev.until) frozenMap.set(a.task_id, { a, until });
+  });
+  const frozen = [...frozenMap.values()].sort((p, q) => p.until - q.until);
   const colOf = (a: Assignment) => freqColor(db.tasks.find((t) => t.id === a.task_id)?.frequency || "");
   const mySubjects = db.subjects.filter((s) => s.kid_id === me.id);
   const [photoAsk, setPhotoAsk] = useState<Assignment | null>(null);
@@ -138,13 +153,23 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
           <Chip tone="amber">En revisión</Chip>
         </Card>
       ))}
-      {done.map((a) => (
-        <Card key={a.id} className="p-3.5 flex items-center gap-3 opacity-70">
-          <IconTile color="#22C55E"><CheckCircle2 size={18} /></IconTile>
-          <span className="font-medium text-navy flex-1 truncate line-through decoration-slate-300">{a.title}</span>
-          <Chip tone="green">+{a.points} pts</Chip>
-        </Card>
-      ))}
+      {frozen.length > 0 && <div className="text-[11px] font-bold tracking-wider uppercase text-slate-400 px-1 pt-1 flex items-center gap-1.5"><Lock size={12} /> Congeladas · vuelven solas</div>}
+      {frozen.map(({ a, until }) => {
+        const date = new Date(until);
+        return (
+          <Card key={a.id} className="p-3.5 flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "#EEF2F7", color: "#94A3B8" }}><Lock size={18} /></div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-navy truncate">{a.title}</div>
+              <div className="text-[11px] font-semibold text-slate-400 mt-0.5">Hecha ✓ · vuelve en <span className="text-brand">{fmtCountdown(until - now)}</span></div>
+            </div>
+            <div className="text-right shrink-0 leading-tight">
+              <div className="text-[11px] font-bold text-slate-400 tabular-nums">{date.toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit" })}</div>
+              <div className="text-[10px] text-slate-300 tabular-nums">{date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</div>
+            </div>
+          </Card>
+        );
+      })}
 
       {expired.map((a) => (
         <Card key={a.id} className="p-4" style={{ borderLeft: "4px solid #EF4444" }}>
