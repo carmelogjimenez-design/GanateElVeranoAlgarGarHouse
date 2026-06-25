@@ -12,9 +12,10 @@ export type Task = {
 export type Assignment = {
   id: string; task_id: string | null; kid_id: string | null; team_id: string | null; title: string;
   points: number; photo_required: boolean; due_date: string | null;
-  status: "todo" | "pending" | "approved" | "rejected" | "open";
-  photo_url: string | null; note: string | null; completed_at: string | null; validated_at: string | null; expired?: boolean; created_at: string;
+  status: "todo" | "pending" | "approved" | "rejected" | "open" | "stolen";
+  photo_url: string | null; note: string | null; completed_at: string | null; validated_at: string | null; expired?: boolean; stolen_from_team?: string | null; created_at: string;
 };
+export type Notification = { id: string; kid_id: string; type: string; title: string; body: string; read: boolean; created_at: string };
 export type Reward = { id: string; title: string; description: string; emoji: string; cost: number; active: boolean; created_at: string };
 export type Redemption = {
   id: string; kid_id: string; reward_id: string | null; title: string; cost: number;
@@ -46,7 +47,7 @@ export type DB = {
   subjects: Subject[]; study_sessions: StudySession[]; point_events: PointEvent[];
   task_targets: TaskTarget[]; settings: Settings | null;
   badges_catalog: Badge[]; kid_badges: KidBadge[]; study_rewards: StudyReward[];
-  study_questions_seen: StudyQuestionSeen[]; test_sessions: TestSession[]; events: GameEvent[]; activity_reactions: ActivityReaction[]; milo_walks: MiloWalk[];
+  study_questions_seen: StudyQuestionSeen[]; test_sessions: TestSession[]; events: GameEvent[]; activity_reactions: ActivityReaction[]; milo_walks: MiloWalk[]; notifications: Notification[];
 };
 
 export type Screen = "lobby" | "kid" | "admin";

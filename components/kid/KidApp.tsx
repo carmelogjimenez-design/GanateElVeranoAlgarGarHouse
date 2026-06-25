@@ -34,6 +34,10 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const [muted, setMutedState] = useState(false);
   const myAsg = db.assignments.filter((a) => a.kid_id === me.id);
   const bell = myAsg.filter((a) => a.status === "pending").length;
+  const myNotifs = (db.notifications || []).filter((n) => n.kid_id === me.id).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  const unreadNotifs = myNotifs.filter((n) => !n.read).length;
+  const bellCount = bell + unreadNotifs;
+  const openNotifs = () => { setNotifOpen(true); if (unreadNotifs > 0) rpc("read_notifications", { p_kid: me.id, p_pin: kid!.pin }).then(() => refresh()); };
   const myLevel = levelOf(me.total_points);
   const now = Date.now();
   const dxp = db.events.find((e) => e.kind === "double_xp" && e.active && new Date(e.starts_at).getTime() <= now && new Date(e.ends_at).getTime() >= now);
@@ -111,8 +115,8 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
           <button onClick={toggleMute} title={muted ? "Activar sonido" : "Silenciar"} className="w-9 h-9 rounded-full bg-white/60 hidden sm:flex items-center justify-center text-navy/60 active:scale-90 transition shrink-0">
             {muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
           </button>
-          <button onClick={() => setNotifOpen(true)} title="Notificaciones" className="relative w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60 active:scale-90 transition shrink-0">
-            <Bell size={17} />{bell > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bell}</span>}
+          <button onClick={openNotifs} title="Notificaciones" className="relative w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60 active:scale-90 transition shrink-0">
+            <Bell size={17} />{bellCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{bellCount}</span>}
           </button>
           <button onClick={() => setAvatarOpen(true)} title="Cambiar avatar" className="active:scale-90 transition shrink-0"><Avatar name={me.name} color={me.color} size={36} avatar={me.avatar} /></button>
           <button onClick={exit} className="w-9 h-9 rounded-full bg-white/60 flex items-center justify-center text-navy/60 active:scale-90 transition shrink-0" title="Salir"><LogOut size={16} /></button>
@@ -150,27 +154,44 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
         <Modal title="Notificaciones" onClose={() => setNotifOpen(false)}>
           {(() => {
             const pend = myAsg.filter((a) => a.status === "pending");
-            if (pend.length === 0)
+            if (pend.length === 0 && myNotifs.length === 0)
               return (
                 <div className="flex flex-col items-center text-center py-8">
                   <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-300 mb-3"><Bell size={26} /></div>
                   <p className="font-bold text-navy">Sin novedades</p>
-                  <p className="text-sm text-slate-400 font-medium mt-1">Cuando entregues una misión, aquí verás si está en revisión.</p>
+                  <p className="text-sm text-slate-400 font-medium mt-1">Aquí verás tus misiones en revisión y los avisos de robo.</p>
                 </div>
               );
             return (
-              <div className="space-y-2.5">
-                <p className="text-sm text-slate-500 font-medium mb-1">Tienes <b className="text-navy">{pend.length}</b> {pend.length === 1 ? "misión" : "misiones"} esperando que los jefes validen:</p>
-                {pend.map((a) => (
-                  <div key={a.id} className="flex items-center gap-3 p-3 rounded-2xl bg-amber-50 border border-amber-100">
-                    <div className="w-9 h-9 rounded-xl bg-amber-400/20 flex items-center justify-center text-amber-500 shrink-0"><Clock size={18} /></div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-navy text-sm truncate">{a.title || "Misión"}</div>
-                      <div className="text-xs text-amber-600 font-medium">En revisión · +{a.points} pts cuando la validen</div>
-                    </div>
+              <div className="space-y-4">
+                {myNotifs.length > 0 && (
+                  <div className="space-y-2.5">
+                    {myNotifs.slice(0, 15).map((n) => (
+                      <div key={n.id} className="flex items-start gap-3 p-3 rounded-2xl" style={n.read ? { background: "rgba(255,255,255,.55)", border: "1px solid #eef2f7" } : { background: "#F6F0FF", border: "1px solid #E9D5FF" }}>
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-base" style={{ background: "#A855F71a" }}>😈</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-navy text-sm">{n.title}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">{n.body}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-                <button onClick={() => { setNotifOpen(false); setTab("tareas"); }} className="w-full mt-1 py-3 rounded-2xl font-bold text-white active:scale-95 transition" style={{ background: "linear-gradient(135deg,#FF6B5E,#FF9F45)" }}>Ver mis misiones</button>
+                )}
+                {pend.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-sm text-slate-500 font-medium">Tienes <b className="text-navy">{pend.length}</b> {pend.length === 1 ? "misión" : "misiones"} esperando que los jefes validen:</p>
+                    {pend.map((a) => (
+                      <div key={a.id} className="flex items-center gap-3 p-3 rounded-2xl bg-amber-50 border border-amber-100">
+                        <div className="w-9 h-9 rounded-xl bg-amber-400/20 flex items-center justify-center text-amber-500 shrink-0"><Clock size={18} /></div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-navy text-sm truncate">{a.title || "Misión"}</div>
+                          <div className="text-xs text-amber-600 font-medium">En revisión · +{a.points} pts cuando la validen</div>
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => { setNotifOpen(false); setTab("tareas"); }} className="w-full mt-1 py-3 rounded-2xl font-bold text-white active:scale-95 transition" style={{ background: "linear-gradient(135deg,#FF6B5E,#FF9F45)" }}>Ver mis misiones</button>
+                  </div>
+                )}
               </div>
             );
           })()}

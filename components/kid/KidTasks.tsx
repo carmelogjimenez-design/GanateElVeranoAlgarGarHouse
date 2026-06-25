@@ -53,6 +53,19 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
     if (!prev || until > prev.until) frozenMap.set(a.task_id, { a, until });
   });
   const frozen = [...frozenMap.values()].sort((p, q) => p.until - q.until);
+  // Robo: solo si el hijo no tiene tareas propias pendientes (todo/rejected)
+  const canSteal = pending.length === 0;
+  const stealMap = new Map<string, { a: Assignment; team: (typeof db.teams)[number] | undefined }>();
+  if (canSteal) db.assignments.forEach((a) => {
+    if (a.status !== "todo" || !a.kid_id || !a.task_id) return;
+    const owner = db.kids.find((k) => k.id === a.kid_id);
+    if (!owner || owner.team_id === me.team_id) return;
+    const task = db.tasks.find((t) => t.id === a.task_id);
+    if (!task || task.scope !== "team") return;
+    const key = a.task_id + "|" + (owner.team_id || "");
+    if (!stealMap.has(key)) stealMap.set(key, { a, team: db.teams.find((t) => t.id === owner.team_id) });
+  });
+  const stealable = [...stealMap.values()];
   const colOf = (a: Assignment) => freqColor(db.tasks.find((t) => t.id === a.task_id)?.frequency || "");
   const mySubjects = db.subjects.filter((s) => s.kid_id === me.id);
   const [photoAsk, setPhotoAsk] = useState<Assignment | null>(null);
@@ -68,6 +81,13 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
     const { error } = await rpc("claim_mission", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin });
     setBusy(null);
     if (error) flash(error.message); else { flash("¡Tuya! Ahora complétala."); sfx("claim"); refresh(); }
+  };
+
+  const steal = async (a: Assignment) => {
+    setBusy(a.id);
+    const { error } = await rpc("steal_assignment", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin });
+    setBusy(null);
+    if (error) { flash(error.message); sfx("reject"); } else { flash("¡Tarea robada! Ahora complétala 😈"); sfx("claim"); refresh(); }
   };
 
   const complete = async (a: Assignment, file?: File | null) => {
@@ -113,7 +133,33 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
           </div>
         </div>
       )}
-      {pending.length === 0 && openAsg.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">{pick(COPY.noTasks)}</Card>}
+      {pending.length === 0 && openAsg.length === 0 && stealable.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">{pick(COPY.noTasks)}</Card>}
+
+      {canSteal && stealable.length > 0 && (
+        <div className="pt-1">
+          <div className="flex items-center gap-1.5 px-0.5 mb-2"><Hand size={14} style={{ color: "#A855F7" }} /><span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#A855F7" }}>Roba a otros equipos · ya acabaste las tuyas</span></div>
+          <div className="space-y-2.5">
+            {stealable.map(({ a, team }) => {
+              const Icon = missionIcon(a.title); const loading = busy === a.id;
+              return (
+                <Card key={a.id} className="p-4" style={{ borderLeft: "4px solid #A855F7" }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: "#A855F7" }}><Icon size={20} /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-navy truncate">{a.title}</div>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        <Chip tone="brand">+{a.points} pts</Chip>
+                        {team && <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: team.color }} />{team.name}</span>}
+                      </div>
+                    </div>
+                    <Btn variant="primary" className="text-sm py-2 flex items-center gap-1.5" disabled={loading} onClick={() => steal(a)}><Hand size={15} /> Robar</Btn>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {pending.map((a) => {
         const Icon = missionIcon(a.title);
         const loading = busy === a.id;
@@ -125,7 +171,7 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
                 <div className="font-semibold text-navy truncate">{a.title}</div>
                 {a.status === "rejected"
                   ? <div className="text-xs font-medium text-red-500 mt-0.5">Rechazada · reinténtalo</div>
-                  : <div className="flex items-center gap-2 flex-wrap"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}{(() => { const dl = db.tasks.find((t) => t.id === a.task_id)?.deadline_time; return dl ? <Chip tone="amber">⏰ antes de {dl.slice(0, 5)}</Chip> : null; })()}</div>}
+                  : <div className="flex items-center gap-2 flex-wrap"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}{a.stolen_from_team && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={{ background: "#A855F71a", color: "#A855F7" }}>😈 robada</span>}{(() => { const dl = db.tasks.find((t) => t.id === a.task_id)?.deadline_time; return dl ? <Chip tone="amber">⏰ antes de {dl.slice(0, 5)}</Chip> : null; })()}</div>}
               </div>
               {a.photo_required ? (
                 <Btn variant="primary" className="text-sm py-2.5 px-3 flex items-center gap-1.5" disabled={loading} onClick={() => setPhotoAsk(a)}>
