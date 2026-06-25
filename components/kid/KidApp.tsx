@@ -89,10 +89,12 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
     <>
       {tut && <TutorialKid kidName={me.name} onClose={() => setTut(false)} />}
     <div className="kidskin min-h-screen pb-28 relative">
-      <div className="kid-bg" />
-      <span className="kid-blob" style={{ width: 360, height: 360, top: -100, right: -90, background: "#FF8A5B" }} />
-      <span className="kid-blob" style={{ width: 340, height: 340, bottom: -110, left: -100, background: "#19D3AE" }} />
-      <span className="kid-blob" style={{ width: 280, height: 280, top: "42%", left: "44%", background: "#FF7EB6", opacity: 0.32 }} />
+      <div className="kid-canvas">
+        <div className="kid-bg" />
+        <span className="kid-blob" style={{ width: 360, height: 360, top: -100, right: -90, background: "#FF8A5B" }} />
+        <span className="kid-blob" style={{ width: 340, height: 340, bottom: -110, left: -100, background: "#19D3AE" }} />
+        <span className="kid-blob" style={{ width: 280, height: 280, top: "42%", left: "44%", background: "#FF7EB6", opacity: 0.32 }} />
+      </div>
       <div className="relative z-10">
       <header className="sticky top-0 z-20" style={{ background: "rgba(255,255,255,.5)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderBottom: "1px solid rgba(255,255,255,.6)" }}>
         <div className="max-w-6xl mx-auto px-4 md:px-8 py-3 flex items-center gap-2">
@@ -119,11 +121,11 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-5">
         {dxp && <div className="mb-4 rounded-xl px-3 py-2.5 text-sm font-bold text-white flex items-center gap-2" style={{ background: "linear-gradient(90deg,#FF8A00,#EAB308)" }}><Zap size={16} /> {dxp.title} · ¡x{dxp.multiplier} en tus misiones!</div>}
         {isAdmin && <div className="mb-4 bg-navy/5 border border-navy/10 rounded-xl px-3 py-2 text-xs font-semibold text-navy flex items-center justify-between"><span>🧪 Modo test (superadmin): estás viendo el panel de {me.name}</span><button onClick={() => setScreen("admin")} className="text-brand">Volver a padres</button></div>}
-        {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} />}
+        {tab === "inicio" && <div className="max-w-2xl"><KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} /></div>}
         {tab === "tareas" && <div className="max-w-2xl"><KidTasks ctx={ctx} me={me} asg={myAsg} onTab={setTab} /></div>}
         {tab === "estudio" && <div className="max-w-2xl"><KidStudy ctx={ctx} me={me} /></div>}
         {tab === "ranking" && <div className="max-w-2xl"><RankingList db={db} highlight={me.id} /></div>}
-        {tab === "tienda" && <KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} />}
+        {tab === "tienda" && <div className="max-w-2xl"><KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} /></div>}
       </main>
 
       <Footer />

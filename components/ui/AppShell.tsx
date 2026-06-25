@@ -49,10 +49,12 @@ export function AppShell({
 
   return (
     <div className="adminskin min-h-screen md:flex relative">
-      <div className="kid-bg" />
-      <span className="kid-blob" style={{ width: 380, height: 380, top: -110, right: -100, background: "#FF8A5B" }} />
-      <span className="kid-blob" style={{ width: 360, height: 360, bottom: -120, left: -110, background: "#19D3AE" }} />
-      <span className="kid-blob" style={{ width: 300, height: 300, top: "40%", left: "52%", background: "#FF7EB6", opacity: 0.28 }} />
+      <div className="kid-canvas">
+        <div className="kid-bg" />
+        <span className="kid-blob" style={{ width: 380, height: 380, top: -110, right: -100, background: "#FF8A5B" }} />
+        <span className="kid-blob" style={{ width: 360, height: 360, bottom: -120, left: -110, background: "#19D3AE" }} />
+        <span className="kid-blob" style={{ width: 300, height: 300, top: "40%", left: "52%", background: "#FF7EB6", opacity: 0.28 }} />
+      </div>
 
       <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-30 px-4 py-6 text-navy"
         style={{ background: "rgba(255,255,255,.55)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderRight: "1px solid rgba(255,255,255,.6)" }}>
