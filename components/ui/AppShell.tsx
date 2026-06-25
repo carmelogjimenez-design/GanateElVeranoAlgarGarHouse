@@ -54,7 +54,7 @@ export function AppShell({
       <span className="kid-blob" style={{ width: 360, height: 360, bottom: -120, left: -110, background: "#19D3AE" }} />
       <span className="kid-blob" style={{ width: 300, height: 300, top: "40%", left: "52%", background: "#FF7EB6", opacity: 0.28 }} />
 
-      <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-10 px-4 py-6 text-navy"
+      <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-30 px-4 py-6 text-navy"
         style={{ background: "rgba(255,255,255,.55)", backdropFilter: "blur(18px)", WebkitBackdropFilter: "blur(18px)", borderRight: "1px solid rgba(255,255,255,.6)" }}>
         <div className="flex items-center gap-3 px-2 mb-8">
           <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center font-extrabold shrink-0" style={{ background: "rgba(255,107,94,.12)", color: accent }}>{brand || "G"}</div>
