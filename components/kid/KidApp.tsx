@@ -121,11 +121,11 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
       <main className="max-w-6xl mx-auto px-4 md:px-8 py-5">
         {dxp && <div className="mb-4 rounded-xl px-3 py-2.5 text-sm font-bold text-white flex items-center gap-2" style={{ background: "linear-gradient(90deg,#FF8A00,#EAB308)" }}><Zap size={16} /> {dxp.title} · ¡x{dxp.multiplier} en tus misiones!</div>}
         {isAdmin && <div className="mb-4 bg-navy/5 border border-navy/10 rounded-xl px-3 py-2 text-xs font-semibold text-navy flex items-center justify-between"><span>🧪 Modo test (superadmin): estás viendo el panel de {me.name}</span><button onClick={() => setScreen("admin")} className="text-brand">Volver a padres</button></div>}
-        {tab === "inicio" && <div className="max-w-2xl"><KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} /></div>}
+        {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} />}
         {tab === "tareas" && <div className="max-w-2xl"><KidTasks ctx={ctx} me={me} asg={myAsg} onTab={setTab} /></div>}
         {tab === "estudio" && <div className="max-w-2xl"><KidStudy ctx={ctx} me={me} /></div>}
         {tab === "ranking" && <div className="max-w-2xl"><RankingList db={db} highlight={me.id} /></div>}
-        {tab === "tienda" && <div className="max-w-2xl"><KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} /></div>}
+        {tab === "tienda" && <KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} />}
       </main>
 
       <Footer />
