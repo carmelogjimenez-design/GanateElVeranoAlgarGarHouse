@@ -32,10 +32,20 @@ export default function RankingList({ db, highlight }: { db: DB; highlight?: str
   const gapUp = ahead && myRow ? ahead.v - myRow.v : 0;
   const lead = myRank === 0 && teamRows[1] && myRow ? myRow.v - teamRows[1].v : 0;
 
+  // Líder de la semana (para el premio de +3 XP del hijo de la semana)
+  const weekRows = [...db.kids].map((k) => ({ k, v: periodXp(k.id, 7) })).sort((a, b) => b.v - a.v);
+  const myWeekIdx = weekRows.findIndex((r) => r.k.id === highlight);
+  const iLeadWeek = weekRows[0] && weekRows[0].k.id === highlight && weekRows[0].v > 0;
+  const weekGap = myWeekIdx > 0 ? weekRows[myWeekIdx - 1].v - weekRows[myWeekIdx].v : 0;
+  const weekAhead = myWeekIdx > 0 ? weekRows[myWeekIdx - 1].k : null;
+
   return (
     <div className="pb-6">
       {/* ===== PIQUE DE EQUIPOS ===== */}
-      <h3 className="font-black text-navy tracking-tight px-0.5 mb-2 flex items-center gap-2 text-lg"><Flame size={20} style={{ color: "#FF6B5E" }} /> Pique de equipos</h3>
+      <div className="flex items-center justify-between px-0.5 mb-2 gap-2">
+        <h3 className="font-black text-navy tracking-tight flex items-center gap-2 text-lg"><Flame size={20} style={{ color: "#FF6B5E" }} /> Pique de equipos</h3>
+        <span className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0" style={{ background: "#FACC151f", color: "#B45309" }}>🏆 +5 XP al equipo del mes</span>
+      </div>
 
       {myRow && (
         <div className="rounded-2xl p-4 mb-3 text-white relative overflow-hidden" style={{ background: myRank === 0 ? "linear-gradient(135deg,#FF9F45,#FF6B5E)" : "linear-gradient(135deg,#0B1F3A,#15315c)" }}>
@@ -49,7 +59,7 @@ export default function RankingList({ db, highlight }: { db: DB; highlight?: str
               <div className="text-xl font-black tracking-tight truncate flex items-center gap-2"><span className="w-3 h-3 rounded-full" style={{ background: myRow.t.color }} />{myRow.t.name}</div>
               <div className="text-[13px] font-semibold text-white/85 mt-0.5">
                 {myRank === 0
-                  ? (teamRows.length > 1 ? `👑 ¡Vais LÍDERES! +${lead} pts sobre el 2º. ¡No os relajéis!` : "👑 ¡Vais líderes!")
+                  ? (teamRows.length > 1 ? `👑 ¡Vais LÍDERES! Si acabáis el mes así, cada uno gana +5 XP 🏆` : "👑 ¡Vais líderes! El equipo del mes gana +5 XP cada uno 🏆")
                   : <>Vais {myRank + 1}º · a <b className="text-white">{gapUp} pts</b> del {myRank}º ({ahead?.t.name}) 🔥 ¡A por ellos!</>}
               </div>
             </div>
@@ -80,7 +90,28 @@ export default function RankingList({ db, highlight }: { db: DB; highlight?: str
       </Card>
 
       {/* ===== INDIVIDUAL ===== */}
-      <h3 className="font-bold text-navy tracking-tight px-0.5 mb-2 flex items-center gap-2"><Trophy size={18} className="text-brand" /> Ranking individual</h3>
+      <div className="flex items-center justify-between px-0.5 mb-2 gap-2">
+        <h3 className="font-bold text-navy tracking-tight flex items-center gap-2"><Trophy size={18} className="text-brand" /> Ranking individual</h3>
+        <span className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0" style={{ background: "#A855F71f", color: "#7c3aed" }}>🌟 +3 XP al líder de la semana</span>
+      </div>
+
+      {weekRows[0] && weekRows[0].v > 0 && (iLeadWeek ? (
+        <div className="rounded-2xl p-3.5 mb-3 text-white" style={{ background: "linear-gradient(135deg,#FF9F45,#A855F7)", boxShadow: "0 14px 34px -18px rgba(168,85,247,.65)" }}>
+          <div className="flex items-center gap-3">
+            <div className="text-[26px] leading-none">🌟</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-[15px]">¡Vas líder de la semana!</div>
+              <div className="text-[12px] text-white/85 font-medium">Si acabas 1º el domingo, te llevas <b className="text-white">+3 XP</b> de premio. ¡No te despistes! 😏</div>
+            </div>
+          </div>
+        </div>
+      ) : myWeekIdx > 0 ? (
+        <div className="rounded-2xl p-3 mb-3" style={{ background: "#A855F70d", border: "1px solid #A855F722" }}>
+          <div className="text-[13px] font-semibold text-navy">Vas a <b style={{ color: "#7c3aed" }}>{weekGap} pts</b> del líder de la semana{weekAhead ? ` (${weekAhead.name})` : ""} 🔥</div>
+          <div className="text-[12px] text-slate-500 font-medium">Adelántale antes del domingo y te llevas los <b>+3 XP</b>.</div>
+        </div>
+      ) : null)}
+
       <div className="flex gap-1.5 mb-3 bg-slate-100 p-1 rounded-2xl">
         {TABS.map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)} className={`flex-1 text-sm font-semibold py-2 rounded-xl transition ${tab === k ? "bg-white text-navy shadow-sm" : "text-slate-400"}`}>{label}</button>
