@@ -7,7 +7,7 @@ import { rpc, todayStr, cooldownMs, fmtCountdown } from "@/lib/helpers";
 import { notifyParents } from "@/lib/push";
 import { sfx } from "@/lib/sfx";
 import { sb } from "@/lib/supabase";
-import { missionIcon, freqColor } from "@/lib/icons";
+import { missionIcon, freqColor, FREQ_META } from "@/lib/icons";
 import type { Ctx, Kid, Assignment, MarketOffer } from "@/lib/types";
 import { Check, Clock, CheckCircle2, Camera, Users, Sparkles, Hand, Lock, HandHeart } from "lucide-react";
 
@@ -100,6 +100,43 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
     if (error) { flash(error.message); sfx("reject"); } else { flash("¡Hecho! Lo validan los jefes."); sfx("complete"); refresh(); }
   };
 
+  const FREQ_TITLE: Record<string, string> = { diaria: "Diarias", "2/semana": "2 por semana", semanal: "Semanales", quincenal: "Quincenales", mensual: "Mensuales", personalizada: "Otras" };
+  const freqOfTask = (a: Assignment) => { const fr = db.tasks.find((t) => t.id === a.task_id)?.frequency || "personalizada"; return FREQ_META[fr] ? fr : "personalizada"; };
+  const renderMission = (a: Assignment) => {
+    const Icon = missionIcon(a.title);
+    const loading = busy === a.id;
+    return (
+      <Card key={a.id} className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: colOf(a) }}><Icon size={20} /></div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-navy truncate">{a.title}</div>
+            {a.status === "rejected"
+              ? <div className="text-xs font-medium text-red-500 mt-0.5">Rechazada · reinténtalo</div>
+              : <div className="flex items-center gap-2 flex-wrap"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}{a.stolen_from_team && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={{ background: "#A855F71a", color: "#A855F7" }}>😈 robada</span>}{(() => { const dl = db.tasks.find((t) => t.id === a.task_id)?.deadline_time; return dl ? <Chip tone="amber">⏰ antes de {dl.slice(0, 5)}</Chip> : null; })()}</div>}
+          </div>
+          {a.photo_required ? (
+            <Btn variant="primary" className="text-sm py-2.5 px-3 flex items-center gap-1.5" disabled={loading} onClick={() => setPhotoAsk(a)}>
+              <Camera size={16} /> Completar
+            </Btn>
+          ) : (
+            <div className="flex items-center gap-2">
+              <label className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center cursor-pointer" title="Adjuntar foto">
+                <Camera size={16} />
+                <input type="file" accept="image/*" capture="environment" hidden disabled={loading}
+                  onChange={(e) => e.target.files?.[0] && complete(a, e.target.files[0])} />
+              </label>
+              <button onClick={() => complete(a)} disabled={loading}
+                className="w-9 h-9 rounded-full border-2 border-slate-200 hover:border-teal hover:bg-teal hover:text-white text-transparent flex items-center justify-center transition disabled:opacity-50"><Check size={18} /></button>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  };
+  const FREQ_ORDER = ["diaria", "2/semana", "semanal", "quincenal", "mensual", "personalizada"];
+  const pendingGroups = FREQ_ORDER.map((f) => ({ f, items: pending.filter((a) => freqOfTask(a) === f) })).filter((g) => g.items.length > 0);
+
   const complete = async (a: Assignment, file?: File | null) => {
     setBusy(a.id);
     let url: string | null = null;
@@ -153,7 +190,10 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
 
       {canSteal && stealable.length > 0 && (
         <div className="pt-1">
-          <div className="flex items-center gap-1.5 px-0.5 mb-2"><Hand size={14} style={{ color: "#A855F7" }} /><span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#A855F7" }}>Roba a otros equipos · ya acabaste las tuyas</span></div>
+          <div className="rounded-2xl p-3 mb-2.5" style={{ background: "#A855F70d", border: "1px solid #A855F733" }}>
+            <div className="flex items-center gap-1.5"><Hand size={15} style={{ color: "#A855F7" }} /><span className="text-sm font-black" style={{ color: "#7c3aed" }}>Robar de otros equipos 🥷</span></div>
+            <div className="text-[12px] text-slate-500 font-medium mt-0.5">Ya acabaste las tuyas. Hazlas tú y <b>te quedas sus puntos</b> (a ellos no se les resta nada).</div>
+          </div>
           <div className="space-y-2.5">
             {stealable.map(({ a, team }) => {
               const Icon = missionIcon(a.title); const loading = busy === a.id;
@@ -165,6 +205,7 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
                       <div className="font-semibold text-navy truncate">{a.title}</div>
                       <div className="flex items-center gap-2 flex-wrap mt-0.5">
                         <Chip tone="brand">+{a.points} pts</Chip>
+                        {(() => { const fr = freqOfTask(a); return <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: freqColor(fr) }}><span className="w-2 h-2 rounded-full" style={{ background: freqColor(fr) }} />{FREQ_META[fr]?.label}</span>; })()}
                         {team && <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: team.color }} />{team.name}</span>}
                       </div>
                     </div>
@@ -176,38 +217,19 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
           </div>
         </div>
       )}
-      {pending.map((a) => {
-        const Icon = missionIcon(a.title);
-        const loading = busy === a.id;
-        return (
-          <Card key={a.id} className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: colOf(a) }}><Icon size={20} /></div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-navy truncate">{a.title}</div>
-                {a.status === "rejected"
-                  ? <div className="text-xs font-medium text-red-500 mt-0.5">Rechazada · reinténtalo</div>
-                  : <div className="flex items-center gap-2 flex-wrap"><Chip tone="brand">+{a.points} pts</Chip>{a.photo_required && <Chip tone="amber">foto</Chip>}{a.stolen_from_team && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={{ background: "#A855F71a", color: "#A855F7" }}>😈 robada</span>}{(() => { const dl = db.tasks.find((t) => t.id === a.task_id)?.deadline_time; return dl ? <Chip tone="amber">⏰ antes de {dl.slice(0, 5)}</Chip> : null; })()}</div>}
-              </div>
-              {a.photo_required ? (
-                <Btn variant="primary" className="text-sm py-2.5 px-3 flex items-center gap-1.5" disabled={loading} onClick={() => setPhotoAsk(a)}>
-                  <Camera size={16} /> Completar
-                </Btn>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <label className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center cursor-pointer" title="Adjuntar foto">
-                    <Camera size={16} />
-                    <input type="file" accept="image/*" capture="environment" hidden disabled={loading}
-                      onChange={(e) => e.target.files?.[0] && complete(a, e.target.files[0])} />
-                  </label>
-                  <button onClick={() => complete(a)} disabled={loading}
-                    className="w-9 h-9 rounded-full border-2 border-slate-200 hover:border-teal hover:bg-teal hover:text-white text-transparent flex items-center justify-center transition disabled:opacity-50"><Check size={18} /></button>
-                </div>
-              )}
-            </div>
-          </Card>
-        );
-      })}
+      {pendingGroups.length > 0 && (
+        <div className="flex items-center gap-1.5 px-0.5 pt-1"><span className="text-xs font-bold uppercase tracking-wide text-navy/70">Tus misiones</span></div>
+      )}
+      {pendingGroups.map((g) => (
+        <div key={g.f}>
+          <div className="flex items-center gap-1.5 px-0.5 mb-2 mt-1">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ background: freqColor(g.f) }} />
+            <span className="text-xs font-bold uppercase tracking-wide" style={{ color: freqColor(g.f) }}>{FREQ_TITLE[g.f] || "Otras"}</span>
+            <span className="text-[11px] font-bold text-slate-300">{g.items.length}</span>
+          </div>
+          <div className="space-y-2.5">{g.items.map(renderMission)}</div>
+        </div>
+      ))}
       {marketFavors.length > 0 && (
         <div className="pt-1">
           <div className="flex items-center gap-1.5 px-0.5 mb-2"><HandHeart size={14} style={{ color: "#FF6B5E" }} /><span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#FF6B5E" }}>Favores del mercado</span></div>

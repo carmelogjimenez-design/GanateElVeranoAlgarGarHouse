@@ -7,7 +7,7 @@ import {
   levelOf, levelProgress, xpToNext, nearestReward,
   weeklyXp, weekdayBars, studyTodaySeconds, teamWeeklyXp, streakDays,
 } from "@/lib/game";
-import { missionIcon, badgeIcon } from "@/lib/icons";
+import { missionIcon, badgeIcon, freqColor, FREQ_META } from "@/lib/icons";
 import { COPY, pick } from "@/lib/copy";
 import { kidVibe } from "@/lib/vibes";
 import { sfx } from "@/lib/sfx";
@@ -152,7 +152,7 @@ export default function KidHome({ ctx, me, onTab, onMercado }:
                 <IconTile color={me.color}><Icon size={20} /></IconTile>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-navy truncate">{a.title}</div>
-                  {a.status === "rejected" ? <span className="text-xs font-medium text-red-500">Rechazada · reinténtalo</span> : <Chip tone="slate">misión</Chip>}
+                  {a.status === "rejected" ? <span className="text-xs font-medium text-red-500">Rechazada · reinténtalo</span> : (() => { const fr = db.tasks.find((t) => t.id === a.task_id)?.frequency || "personalizada"; return <span className="inline-flex items-center gap-1 text-[11px] font-bold" style={{ color: freqColor(fr) }}><span className="w-2 h-2 rounded-full" style={{ background: freqColor(fr) }} />{FREQ_META[fr]?.label || "Misión"}</span>; })()}
                 </div>
                 <div className="text-right mr-1"><div className="font-extrabold text-teal leading-none">+{a.points}</div><div className="text-[10px] text-slate-400">pts</div></div>
                 <button onClick={() => mark(a.id)} className="w-9 h-9 rounded-full border-2 border-slate-200 hover:border-teal hover:bg-teal hover:text-white text-transparent flex items-center justify-center transition"><Check size={18} /></button>
