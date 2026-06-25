@@ -53,10 +53,10 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
     if (!prev || until > prev.until) frozenMap.set(a.task_id, { a, until });
   });
   const frozen = [...frozenMap.values()].sort((p, q) => p.until - q.until);
-  // Robo: solo si el hijo no tiene tareas propias pendientes (todo/rejected)
+  // Robo: las tareas robables se calculan siempre (para teasear); solo se pueden robar si no tienes pendientes
   const canSteal = pending.length === 0;
   const stealMap = new Map<string, { a: Assignment; team: (typeof db.teams)[number] | undefined }>();
-  if (canSteal) db.assignments.forEach((a) => {
+  db.assignments.forEach((a) => {
     if (a.status !== "todo" || !a.kid_id || !a.task_id) return;
     const owner = db.kids.find((k) => k.id === a.kid_id);
     if (!owner || owner.team_id === me.team_id) return;
@@ -164,6 +164,28 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
         <h3 className="font-bold text-navy tracking-tight">Misiones de hoy</h3>
         {me.can_tutor && <button onClick={() => setTutor(true)} className="text-sm font-semibold text-teal flex items-center gap-1"><Users size={15} /> Marcar por un hermano</button>}
       </div>
+
+      {stealable.length > 0 && (canSteal ? (
+        <div className="rounded-2xl p-3.5 text-white" style={{ background: "linear-gradient(135deg,#A855F7,#7c3aed)", boxShadow: "0 14px 34px -18px rgba(168,85,247,.7)" }}>
+          <div className="flex items-center gap-3">
+            <div className="text-[26px] leading-none">🥷</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-[15px]">¡Modo robo DESBLOQUEADO!</div>
+              <div className="text-[12px] text-white/85 font-medium">Hay <b className="text-white">{stealable.length}</b> {stealable.length === 1 ? "tarea" : "tareas"} de tus hermanos esperando. ¡Róbalas y quédate sus puntos! 😏</div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl p-3.5" style={{ background: "linear-gradient(135deg,#FFF1E6,#FCE7F3)", border: "1px solid #A855F722" }}>
+          <div className="flex items-center gap-3">
+            <div className="text-[26px] leading-none">🥷</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-[15px] text-navy">{pending.length === 1 ? "¡A 1 misión del modo robo!" : `A ${pending.length} misiones del modo robo`}</div>
+              <div className="text-[12px] text-slate-500 font-medium">Acaba {pending.length === 1 ? "esa misión" : "tus misiones"} y podrás robar <b style={{ color: "#7c3aed" }}>{stealable.length} {stealable.length === 1 ? "tarea" : "tareas"}</b> de tus hermanos para ganar <b>puntos extra</b> 😏</div>
+            </div>
+          </div>
+        </div>
+      ))}
       {openAsg.length > 0 && (
         <div className="mb-1">
           <div className="flex items-center gap-1.5 px-0.5 mb-2"><Sparkles size={14} className="text-blue-500" /><span className="text-xs font-bold uppercase tracking-wide text-blue-500">Disponibles · las coge quien quiera</span></div>
@@ -188,35 +210,6 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
       )}
       {pending.length === 0 && openAsg.length === 0 && stealable.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">{pick(COPY.noTasks)}</Card>}
 
-      {canSteal && stealable.length > 0 && (
-        <div className="pt-1">
-          <div className="rounded-2xl p-3 mb-2.5" style={{ background: "#A855F70d", border: "1px solid #A855F733" }}>
-            <div className="flex items-center gap-1.5"><Hand size={15} style={{ color: "#A855F7" }} /><span className="text-sm font-black" style={{ color: "#7c3aed" }}>Robar de otros equipos 🥷</span></div>
-            <div className="text-[12px] text-slate-500 font-medium mt-0.5">Ya acabaste las tuyas. Hazlas tú y <b>te quedas sus puntos</b> (a ellos no se les resta nada).</div>
-          </div>
-          <div className="space-y-2.5">
-            {stealable.map(({ a, team }) => {
-              const Icon = missionIcon(a.title); const loading = busy === a.id;
-              return (
-                <Card key={a.id} className="p-4" style={{ borderLeft: "4px solid #A855F7" }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: "#A855F7" }}><Icon size={20} /></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-navy truncate">{a.title}</div>
-                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                        <Chip tone="brand">+{a.points} pts</Chip>
-                        {(() => { const fr = freqOfTask(a); return <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: freqColor(fr) }}><span className="w-2 h-2 rounded-full" style={{ background: freqColor(fr) }} />{FREQ_META[fr]?.label}</span>; })()}
-                        {team && <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: team.color }} />{team.name}</span>}
-                      </div>
-                    </div>
-                    <Btn variant="primary" className="text-sm py-2 flex items-center gap-1.5" disabled={loading} onClick={() => steal(a)}><Hand size={15} /> Robar</Btn>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
       {pendingGroups.length > 0 && (
         <div className="flex items-center gap-1.5 px-0.5 pt-1"><span className="text-xs font-bold uppercase tracking-wide text-navy/70">Tus misiones</span></div>
       )}
@@ -230,6 +223,41 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
           <div className="space-y-2.5">{g.items.map(renderMission)}</div>
         </div>
       ))}
+
+      {stealable.length > 0 && (
+        <div className="pt-1">
+          <div className="rounded-2xl p-3 mb-2.5" style={canSteal ? { background: "#A855F70d", border: "1px solid #A855F733" } : { background: "#F1F5F9", border: "1px solid #e2e8f0" }}>
+            <div className="flex items-center gap-1.5">
+              {canSteal ? <Hand size={15} style={{ color: "#A855F7" }} /> : <Lock size={14} className="text-slate-400" />}
+              <span className="text-sm font-black" style={{ color: canSteal ? "#7c3aed" : "#64748b" }}>{canSteal ? "Robar de otros equipos 🥷" : "Tareas robables · bloqueadas 🔒"}</span>
+            </div>
+            <div className="text-[12px] text-slate-500 font-medium mt-0.5">{canSteal ? <>Hazlas tú y <b>te quedas sus puntos</b> (a ellos no se les resta nada).</> : <>Acaba tus <b>{pending.length}</b> {pending.length === 1 ? "misión" : "misiones"} y podrás robar estas para ganar puntos extra 😏</>}</div>
+          </div>
+          <div className="space-y-2.5">
+            {stealable.map(({ a, team }) => {
+              const Icon = missionIcon(a.title); const loading = busy === a.id;
+              return (
+                <Card key={a.id} className={`p-4 ${canSteal ? "" : "opacity-70"}`} style={{ borderLeft: `4px solid ${canSteal ? "#A855F7" : "#CBD5E1"}` }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: canSteal ? "#A855F7" : "#CBD5E1" }}><Icon size={20} /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-navy truncate">{a.title}</div>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        <Chip tone="brand">+{a.points} pts</Chip>
+                        {(() => { const fr = freqOfTask(a); return <span className="text-[11px] font-bold flex items-center gap-1" style={{ color: freqColor(fr) }}><span className="w-2 h-2 rounded-full" style={{ background: freqColor(fr) }} />{FREQ_META[fr]?.label}</span>; })()}
+                        {team && <span className="text-[11px] font-semibold text-slate-400 flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ background: team.color }} />{team.name}</span>}
+                      </div>
+                    </div>
+                    {canSteal
+                      ? <Btn variant="primary" className="text-sm py-2 flex items-center gap-1.5" disabled={loading} onClick={() => steal(a)}><Hand size={15} /> Robar</Btn>
+                      : <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center shrink-0"><Lock size={16} /></div>}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {marketFavors.length > 0 && (
         <div className="pt-1">
           <div className="flex items-center gap-1.5 px-0.5 mb-2"><HandHeart size={14} style={{ color: "#FF6B5E" }} /><span className="text-xs font-bold uppercase tracking-wide" style={{ color: "#FF6B5E" }}>Favores del mercado</span></div>
