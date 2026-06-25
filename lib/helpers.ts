@@ -13,9 +13,16 @@ export async function loadAll(): Promise<DB> {
         ? "id,name,emoji,color,team_id,total_points,study_enabled,active,created_at,weekly_goal,can_tutor,app_access,avatar,user_id,status"
         : "*";
       const limited: Record<string, number> = { point_events: 2000, study_sessions: 2000, study_questions_seen: 4000, test_sessions: 1000 };
-      let q = sb.from(t).select(cols).order("created_at", { ascending: false });
-      if (limited[t]) q = q.limit(limited[t]);
-      const { data } = await q;
+      const build = (withOrder: boolean) => {
+        let q = sb.from(t).select(cols);
+        if (withOrder) q = q.order("created_at", { ascending: false });
+        if (limited[t]) q = q.limit(limited[t]);
+        return q;
+      };
+      // Algunas tablas (p.ej. kid_badges) no tienen 'created_at'. Si ordenar
+      // falla, reintentamos sin orden para que la tabla cargue igualmente.
+      let { data, error } = await build(true);
+      if (error) ({ data } = await build(false));
       out[t] = data ?? [];
     })
   );
