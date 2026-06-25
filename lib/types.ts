@@ -13,7 +13,7 @@ export type Assignment = {
   id: string; task_id: string | null; kid_id: string | null; team_id: string | null; title: string;
   points: number; photo_required: boolean; due_date: string | null;
   status: "todo" | "pending" | "approved" | "rejected" | "open" | "stolen";
-  photo_url: string | null; note: string | null; completed_at: string | null; validated_at: string | null; expired?: boolean; stolen_from_team?: string | null; created_at: string;
+  photo_url: string | null; note: string | null; completed_at: string | null; validated_at: string | null; expired?: boolean; stolen_from_team?: string | null; share_team?: boolean | null; created_at: string;
 };
 export type Notification = { id: string; kid_id: string; type: string; title: string; body: string; read: boolean; created_at: string };
 export type MarketOffer = { id: string; maker_id: string; taker_id: string | null; kind: "offer" | "request"; title: string; points: number; status: "open" | "taken" | "submitted" | "done" | "rejected" | "cancelled"; created_at: string; closed_at: string | null };

@@ -70,6 +70,8 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
   const colOf = (a: Assignment) => freqColor(db.tasks.find((t) => t.id === a.task_id)?.frequency || "");
   const mySubjects = db.subjects.filter((s) => s.kid_id === me.id);
   const [photoAsk, setPhotoAsk] = useState<Assignment | null>(null);
+  const [shareAsk, setShareAsk] = useState<Assignment | null>(null);
+  const isTeamMission = (a: Assignment) => { const t = db.tasks.find((x) => x.id === a.task_id); return t?.scope === "team" && !!a.team_id; };
   const [nextAsk, setNextAsk] = useState<{ kind: "mission" | "study" | "phrase"; next?: Assignment; phrase?: string } | null>(null);
   const openNext = (justDone: Assignment) => {
     const remaining = asg.filter((x) => x.id !== justDone.id && ["todo", "rejected"].includes(x.status) && !x.expired);
@@ -109,7 +111,13 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
     }
     const { error } = await rpc("mark_done", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin, p_photo: url });
     setBusy(null);
-    if (error) { flash(error.message); sfx("reject"); } else { flash(pick(COPY.done)); sfx("complete"); notifyParents("Gánate el Verano", `${me.name} ha completado: ${a.title}`); refresh(); openNext(a); }
+    if (error) { flash(error.message); sfx("reject"); } else { flash(pick(COPY.done)); sfx("complete"); notifyParents("Gánate el Verano", `${me.name} ha completado: ${a.title}`); refresh(); if (isTeamMission(a)) setShareAsk(a); else openNext(a); }
+  };
+
+  const setShare = async (a: Assignment, share: boolean) => {
+    setShareAsk(null);
+    await rpc("set_share", { p_assignment: a.id, p_kid: me.id, p_pin: kid!.pin, p_share: share });
+    flash(share ? "¡Repartido con el equipo!" : "¡Te los quedas tú!"); refresh(); openNext(a);
   };
 
   return (
@@ -258,6 +266,22 @@ export default function KidTasks({ ctx, me, asg, onTab }: { ctx: Ctx; me: Kid; a
       ))}
 
       {photoAsk && <PhotoReminderModal a={photoAsk} onClose={() => setPhotoAsk(null)} onComplete={(f) => complete(photoAsk, f)} />}
+
+      {shareAsk && (
+        <Modal title="¡Misión de equipo!" onClose={() => { const a = shareAsk; setShareAsk(null); if (a) openNext(a); }}>
+          <p className="text-sm text-slate-500 font-medium mb-4">Has completado «{shareAsk.title}». ¿Qué haces con los <b className="text-navy">{shareAsk.points} XP</b>?</p>
+          <div className="space-y-2.5">
+            <button onClick={() => setShare(shareAsk, true)} className="w-full text-left rounded-2xl p-4 border-2 transition active:scale-[.99]" style={{ borderColor: "#19D3AE", background: "#19D3AE0d" }}>
+              <div className="flex items-center gap-2 font-bold text-navy"><Users size={18} style={{ color: "#0E9C82" }} /> Repartir con el equipo</div>
+              <div className="text-[12px] text-slate-500 font-medium mt-0.5">Cada miembro se lleva su parte. ¡Más equipo!</div>
+            </button>
+            <button onClick={() => setShare(shareAsk, false)} className="w-full text-left rounded-2xl p-4 border-2 transition active:scale-[.99]" style={{ borderColor: "#FF6B5E", background: "#FF6B5E0d" }}>
+              <div className="flex items-center gap-2 font-bold text-navy"><Sparkles size={18} style={{ color: "#FF6B5E" }} /> Quedártelos tú</div>
+              <div className="text-[12px] text-slate-500 font-medium mt-0.5">Te llevas los {shareAsk.points} XP enteros.</div>
+            </button>
+          </div>
+        </Modal>
+      )}
       {nextAsk && <NextActionModal data={nextAsk} onClose={() => setNextAsk(null)} onGoStudy={() => onTab?.("estudio")} />}
       {tutor && <TutorModal ctx={ctx} me={me} onClose={() => setTutor(false)} />}
     </div>
