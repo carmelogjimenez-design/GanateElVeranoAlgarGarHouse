@@ -15,7 +15,7 @@ import Celebration from "@/components/Celebration";
 import Footer from "@/components/Footer";
 import TutorialKid from "@/components/kid/TutorialKid";
 import type { Ctx } from "@/lib/types";
-import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap, Volume2, VolumeX, Clock } from "lucide-react";
+import { Home, ClipboardList, BookOpen, Trophy, ShoppingBag, Star, Bell, LogOut, Sparkles, Lock, Camera, Zap, Volume2, VolumeX, Clock, Handshake } from "lucide-react";
 import { isMuted, setMuted } from "@/lib/sfx";
 import { dadSpeak } from "@/lib/voice";
 
@@ -26,7 +26,6 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
   const exit = () => { if (isAdmin) setScreen("admin"); else if (session) logout(); else setScreen("lobby"); };
   const me = db.kids.find((k) => k.id === kid!.id) || kid!;
   const [tab, setTab] = useState("inicio");
-  const [mercado, setMercado] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [celeb, setCeleb] = useState<Celeb | null>(null);
@@ -78,7 +77,7 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
 
   const nav: [string, string, typeof Home][] = [["inicio", "Inicio", Home], ["tareas", "Misiones", ClipboardList]];
   if (me.study_enabled) nav.push(["estudio", "Estudio", BookOpen]);
-  nav.push(["ranking", "Ranking", Trophy], ["tienda", "Tienda", ShoppingBag]);
+  nav.push(["ranking", "Ranking", Trophy], ["tienda", "Tienda", ShoppingBag], ["mercado", "Mercado", Handshake]);
 
   useEffect(() => {
     setMutedState(isMuted());
@@ -126,11 +125,12 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
       <main className="max-w-2xl mx-auto px-4 py-5">
         {dxp && <div className="mb-4 rounded-xl px-3 py-2.5 text-sm font-bold text-white flex items-center gap-2" style={{ background: "linear-gradient(90deg,#FF8A00,#EAB308)" }}><Zap size={16} /> {dxp.title} · ¡x{dxp.multiplier} en tus misiones!</div>}
         {isAdmin && <div className="mb-4 bg-navy/5 border border-navy/10 rounded-xl px-3 py-2 text-xs font-semibold text-navy flex items-center justify-between"><span>🧪 Modo test (superadmin): estás viendo el panel de {me.name}</span><button onClick={() => setScreen("admin")} className="text-brand">Volver a padres</button></div>}
-        {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setMercado(true)} />}
+        {tab === "inicio" && <KidHome ctx={ctx} me={me} onTab={setTab} onMercado={() => setTab("mercado")} />}
         {tab === "tareas" && <KidTasks ctx={ctx} me={me} asg={myAsg} onTab={setTab} />}
         {tab === "estudio" && <KidStudy ctx={ctx} me={me} />}
         {tab === "ranking" && <RankingList db={db} highlight={me.id} />}
         {tab === "tienda" && <KidRewards ctx={ctx} me={me} onCelebrate={() => setCeleb({ icon: <ShoppingBag size={42} />, title: "¡Canje solicitado!", subtitle: "A esperar el OK de los jefes", color: "#19D3AE" })} />}
+        {tab === "mercado" && <KidMarket ctx={ctx} me={me} />}
       </main>
 
       <Footer />
@@ -147,8 +147,6 @@ export default function KidApp({ ctx }: { ctx: Ctx }) {
           })}
         </div>
       </nav>
-
-      {mercado && <Modal title="Mercado de hermanos" onClose={() => setMercado(false)}><KidMarket ctx={ctx} me={me} /></Modal>}
 
       {notifOpen && (
         <Modal title="Notificaciones" onClose={() => setNotifOpen(false)}>

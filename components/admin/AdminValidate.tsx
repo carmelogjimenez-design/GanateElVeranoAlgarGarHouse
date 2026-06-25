@@ -13,12 +13,13 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const gif = db.gifts.filter((g) => g.status === "pending");
   const sr = db.study_rewards.filter((r) => r.status === "pending");
   const milo = (db.milo_walks || []).filter((w) => w.status === "pending");
+  const market = (db.market_offers || []).filter((o) => o.status === "taken");
   const newKids = db.kids.filter((k) => k.user_id && k.status === "pending");
   const call = async (fn: string, args: Record<string, unknown>, msg: string) => {
     const { error } = await rpc(fn, args); flash(error ? error.message : msg); refresh();
   };
   const [view, setView] = useState<"pendiente" | "historico">("pendiente");
-  const pendingCount = asg.length + red.length + gif.length + sr.length + milo.length + newKids.length;
+  const pendingCount = asg.length + red.length + gif.length + sr.length + milo.length + market.length + newKids.length;
   const nothingPending = pendingCount === 0;
   const hist = db.assignments
     .filter((a) => a.status === "approved" || a.status === "rejected")
@@ -132,6 +133,34 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
                 <div className="flex gap-2">
                   <Btn variant="teal" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("approve_milo", { p_walk: w.id }, "Paseo validado · +" + (w.points ?? 0) + " XP")}><Check size={16} /> Validar</Btn>
                   <Btn variant="ghost" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("reject_milo", { p_walk: w.id }, "Paseo rechazado")}><X size={16} /> Rechazar</Btn>
+                </div>
+              </Card>
+            );
+          })}
+        </Section>
+      )}
+      {market.length > 0 && (
+        <Section title="Tratos del mercado">
+          {market.map((o) => {
+            const maker = kidOf(o.maker_id); const taker = kidOf(o.taker_id);
+            const doer = o.kind === "offer" ? maker : taker;   // quien hace el favor (gana)
+            const payer = o.kind === "offer" ? taker : maker;  // quien paga
+            return (
+              <Card key={o.id} className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={o.kind === "request" ? { background: "#19D3AE1a", color: "#0E9C82" } : { background: "#FF6B5E1a", color: "#E05546" }}>{o.kind === "request" ? "🙏 Petición" : "💪 Oferta"}</span>
+                  <div className="font-semibold text-navy truncate flex-1">{o.title}</div>
+                  <Chip tone="brand">{o.points} XP</Chip>
+                </div>
+                <div className="flex items-center gap-2 text-sm mb-3 flex-wrap">
+                  {doer && <span className="flex items-center gap-1.5 font-semibold text-teal"><Avatar name={doer.name} color={doer.color} size={22} avatar={doer.avatar} />{doer.name} <span className="text-slate-400 font-medium">hace y gana +{o.points}</span></span>
+                  }
+                  <span className="text-slate-300">·</span>
+                  {payer && <span className="flex items-center gap-1.5 font-semibold text-red-500"><Avatar name={payer.name} color={payer.color} size={22} avatar={payer.avatar} />{payer.name} <span className="text-slate-400 font-medium">paga −{o.points}</span></span>}
+                </div>
+                <div className="flex gap-2">
+                  <Btn variant="teal" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("approve_market", { p_offer: o.id }, "Trato cerrado · puntos movidos")}><Check size={16} /> Validar</Btn>
+                  <Btn variant="ghost" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("reject_market", { p_offer: o.id }, "Trato devuelto al tablón")}><X size={16} /> Rechazar</Btn>
                 </div>
               </Card>
             );

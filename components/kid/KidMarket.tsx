@@ -1,77 +1,178 @@
 "use client";
 import { useState } from "react";
-import { Card, Btn, Input, Avatar } from "@/components/ui/atoms";
+import { Card, Btn, Input, Avatar, Chip } from "@/components/ui/atoms";
 import { rpc } from "@/lib/helpers";
 import { notifyParents } from "@/lib/push";
-import type { Ctx, Kid } from "@/lib/types";
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, Star, Handshake } from "lucide-react";
+import { sfx } from "@/lib/sfx";
+import type { Ctx, Kid, MarketOffer } from "@/lib/types";
+import { Handshake, Plus, Flame, Check, X, ArrowUpRight, ArrowDownLeft, HandHeart, Coins } from "lucide-react";
 
 export default function KidMarket({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const { db, flash, refresh, kid } = ctx;
-  const [to, setTo] = useState("");
+  const [kind, setKind] = useState<"offer" | "request">("offer");
+  const [title, setTitle] = useState("");
   const [pts, setPts] = useState(5);
-  const [why, setWhy] = useState("");
-  const siblings = db.kids.filter((k) => k.id !== me.id && k.active);
-  const send = async () => {
-    if (!to) return flash("Elige a un hermano");
-    const { error } = await rpc("request_gift", { p_from: me.id, p_pin: kid!.pin, p_to: to, p_points: pts, p_reason: why });
-    if (error) flash(error.message);
-    else { notifyParents("Gánate el Verano", `${me.name} ofrece ${pts} XP a un hermano`); flash("Oferta enviada. Los padres dan el OK."); setPts(5); setWhy(""); setTo(""); refresh(); }
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const offers = db.market_offers || [];
+  const open = offers.filter((o) => o.status === "open").sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  const others = open.filter((o) => o.maker_id !== me.id);
+  const mineOpen = open.filter((o) => o.maker_id === me.id);
+  const chollo = [...others].sort((a, b) => b.points - a.points)[0];
+  const mine = offers.filter((o) => o.maker_id === me.id || o.taker_id === me.id).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  const nameOf = (id: string | null) => db.kids.find((k) => k.id === id)?.name || "—";
+  const kidOf = (id: string | null) => db.kids.find((k) => k.id === id);
+
+  const create = async () => {
+    if (!title.trim()) return flash("Ponle un título al trato");
+    setBusy("new");
+    const { error } = await rpc("create_offer", { p_maker: me.id, p_pin: kid!.pin, p_kind: kind, p_title: title.trim(), p_points: pts });
+    setBusy(null);
+    if (error) { flash(error.message); sfx("reject"); }
+    else { flash("¡Trato publicado en el mercado!"); sfx("claim"); setTitle(""); setPts(5); refresh(); }
   };
-  const moves = db.gifts.filter((g) => g.from_kid === me.id || g.to_kid === me.id).slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  const accept = async (o: MarketOffer) => {
+    setBusy(o.id);
+    const { error } = await rpc("accept_offer", { p_offer: o.id, p_taker: me.id, p_pin: kid!.pin });
+    setBusy(null);
+    if (error) { flash(error.message); sfx("reject"); }
+    else { notifyParents("Gánate el Verano", `${me.name} aceptó un trato del mercado`); flash("¡Trato aceptado! Lo validan los jefes."); sfx("complete"); refresh(); }
+  };
+  const cancel = async (o: MarketOffer) => {
+    setBusy(o.id);
+    const { error } = await rpc("cancel_offer", { p_offer: o.id, p_maker: me.id, p_pin: kid!.pin });
+    setBusy(null);
+    if (error) flash(error.message); else { flash("Trato retirado"); refresh(); }
+  };
+
+  // offer  = yo hago un favor y cobro  -> quien acepta PAGA
+  // request= yo pago por un favor      -> quien acepta GANA
+  const canAfford = (o: MarketOffer) => (o.kind === "offer" ? me.total_points >= o.points : true);
+
+  const OfferCard = ({ o, highlight }: { o: MarketOffer; highlight?: boolean }) => {
+    const maker = kidOf(o.maker_id);
+    const earn = o.kind === "request"; // quien acepta gana XP
+    const loading = busy === o.id;
+    return (
+      <Card className="p-4" style={{ borderLeft: `4px solid ${earn ? "#19D3AE" : "#FF6B5E"}`, ...(highlight ? { boxShadow: "0 14px 34px -16px rgba(255,159,69,.6)" } : {}) }}>
+        <div className="flex items-center gap-3">
+          {maker && <Avatar name={maker.name} color={maker.color} size={40} avatar={maker.avatar} />}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={{ background: earn ? "#19D3AE1a" : "#FF6B5E1a", color: earn ? "#0E9C82" : "#E05546" }}>{earn ? "🙏 Pide" : "💪 Ofrece"}</span>
+              {highlight && <span className="text-[11px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1" style={{ background: "#FF9F451a", color: "#E0820F" }}><Flame size={11} /> chollo</span>}
+            </div>
+            <div className="font-semibold text-navy truncate mt-1">{o.title}</div>
+            <div className="text-[11px] text-slate-400 font-medium">{maker?.name}</div>
+          </div>
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="text-right leading-none">
+              <span className="text-lg font-black tabular-nums" style={{ color: earn ? "#0E9C82" : "#E05546" }}>{earn ? "+" : "−"}{o.points}</span>
+              <span className="text-[10px] font-semibold text-slate-400"> XP</span>
+            </div>
+            <Btn variant="primary" className="text-xs py-1.5 px-3" disabled={loading || !canAfford(o)} onClick={() => accept(o)}>{canAfford(o) ? "Aceptar" : "Sin XP"}</Btn>
+          </div>
+        </div>
+      </Card>
+    );
+  };
 
   return (
     <div className="pb-6 space-y-5">
-      <Card className="p-4 flex items-center gap-3" style={{ background: "linear-gradient(135deg,#0B1F3A,#15315c)" }}>
-        <div className="w-11 h-11 rounded-2xl bg-teal/20 flex items-center justify-center text-teal"><Handshake size={22} /></div>
-        <div className="flex-1">
-          <div className="text-white font-extrabold tracking-tight">Mercado entre hermanos</div>
-          <div className="text-white/60 text-xs font-medium">Paga XP por favores. Lo aprueban los padres.</div>
+      {/* HÉROE */}
+      <div className="relative overflow-hidden rounded-[24px] p-5 text-white" style={{ background: "linear-gradient(135deg,#0B1F3A,#15315c)", boxShadow: "0 18px 44px -22px rgba(11,31,58,.55)" }}>
+        <div className="absolute -top-10 -right-6 w-32 h-32 rounded-full pointer-events-none" style={{ background: "rgba(25,211,174,.18)", filter: "blur(8px)" }} />
+        <div className="relative flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "rgba(25,211,174,.2)", color: "#19D3AE" }}><Handshake size={24} /></div>
+          <div className="flex-1 min-w-0">
+            <div className="text-[11px] font-bold tracking-[.16em] uppercase text-white/55">El Mercado</div>
+            <div className="text-xl font-black tracking-tight">Tratos entre hermanos</div>
+          </div>
+          <div className="text-right shrink-0"><div className="text-2xl font-black" style={{ color: "#19D3AE" }}>{me.total_points}</div><div className="text-[10px] text-white/55 font-semibold">TU XP</div></div>
         </div>
-        <div className="text-right"><div className="text-2xl font-extrabold text-white tabular-nums">{me.total_points}</div><div className="text-[10px] text-white/50 font-semibold">TU XP</div></div>
-      </Card>
+        <p className="relative text-white/75 text-[13px] font-medium mt-3 leading-snug">
+          <b className="text-white">💪 Ofreces</b> un favor y cobras XP, o <b className="text-white">🙏 pides</b> un favor pagando XP. Quien lo hace, gana; quien lo recibe, paga. Los jefes dan el OK.
+        </p>
+      </div>
 
+      {/* PUBLICAR */}
       <Card className="p-4">
-        <div className="text-sm font-semibold text-navy mb-2">1 · ¿A quién?</div>
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          {siblings.map((k) => (
-            <button key={k.id} onClick={() => setTo(k.id)} className={`flex flex-col items-center gap-1 rounded-xl p-2 border transition ${to === k.id ? "border-brand bg-orange-50" : "border-transparent hover:bg-slate-50"}`}>
-              <Avatar name={k.name} color={k.color} size={40} avatar={k.avatar} />
-              <span className="text-[11px] font-semibold text-navy truncate w-full text-center">{k.name}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-2 mb-3"><Plus size={16} className="text-brand" /><h3 className="font-bold text-navy tracking-tight text-sm">Publicar un trato</h3></div>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <button onClick={() => setKind("offer")} className="rounded-2xl p-3 border text-left transition" style={kind === "offer" ? { borderColor: "#FF6B5E", background: "#FF6B5E0d" } : { borderColor: "#e8edf3" }}>
+            <div className="flex items-center gap-1.5 font-bold text-navy text-sm"><HandHeart size={16} style={{ color: "#FF6B5E" }} /> Ofrezco</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Hago un favor y cobro XP</div>
+          </button>
+          <button onClick={() => setKind("request")} className="rounded-2xl p-3 border text-left transition" style={kind === "request" ? { borderColor: "#19D3AE", background: "#19D3AE0d" } : { borderColor: "#e8edf3" }}>
+            <div className="flex items-center gap-1.5 font-bold text-navy text-sm"><Coins size={16} style={{ color: "#0E9C82" }} /> Pido</div>
+            <div className="text-[11px] text-slate-400 font-medium mt-0.5">Pago XP por un favor</div>
+          </button>
         </div>
-        <div className="text-sm font-semibold text-navy mb-2">2 · ¿Cuánto y por qué?</div>
-        <div className="flex items-center gap-2 mb-2">
-          <button onClick={() => setPts((p) => Math.max(1, p - 1))} className="w-10 h-10 rounded-xl bg-slate-100 font-bold text-navy text-lg">−</button>
-          <div className="flex-1 text-center"><span className="text-2xl font-extrabold text-navy tabular-nums">{pts}</span><span className="text-sm font-semibold text-slate-400"> XP</span></div>
-          <button onClick={() => setPts((p) => p + 1)} className="w-10 h-10 rounded-xl bg-slate-100 font-bold text-navy text-lg">+</button>
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={kind === "offer" ? "Ej. Te hago la cama" : "Ej. Cúbreme la cocina"} className="mb-3" />
+        <div className="flex items-center gap-2 mb-3">
+          <button onClick={() => setPts((p) => Math.max(1, p - 1))} className="w-10 h-10 rounded-xl bg-slate-100 font-bold text-navy text-lg active:scale-90 transition">−</button>
+          <div className="flex-1 text-center"><span className="text-2xl font-black text-navy tabular-nums">{pts}</span><span className="text-sm font-semibold text-slate-400"> XP</span></div>
+          <button onClick={() => setPts((p) => p + 1)} className="w-10 h-10 rounded-xl bg-slate-100 font-bold text-navy text-lg active:scale-90 transition">+</button>
         </div>
-        <Input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Ej. por hacer mi misión de la cocina" className="mb-3" />
-        <Btn variant="primary" className="w-full flex items-center justify-center gap-2" onClick={send}>Enviar oferta <ArrowRight size={16} /></Btn>
+        <Btn variant="primary" className="w-full flex items-center justify-center gap-2" disabled={busy === "new"} onClick={create}>
+          <Plus size={16} /> Publicar {kind === "offer" ? "oferta" : "petición"}
+        </Btn>
+        {kind === "request" && me.total_points < pts && <div className="text-[11px] text-red-500 font-semibold mt-2 text-center">No tienes {pts} XP para pagar este trato.</div>}
       </Card>
 
+      {/* TABLÓN */}
       <div>
-        <h4 className="font-semibold text-navy text-sm mb-2 px-0.5">Tus movimientos</h4>
-        {moves.length === 0 && <Card className="p-5 text-center text-slate-400 text-sm font-medium">Aún no has hecho ningún trato.</Card>}
-        <div className="space-y-2">
-          {moves.map((g) => {
-            const out = g.from_kid === me.id;
-            const other = db.kids.find((k) => k.id === (out ? g.to_kid : g.from_kid));
+        <div className="flex items-center justify-between px-0.5 mb-2">
+          <h3 className="font-bold text-navy tracking-tight">Tablón · {others.length + mineOpen.length} {others.length + mineOpen.length === 1 ? "trato" : "tratos"}</h3>
+        </div>
+        {others.length === 0 && mineOpen.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">Tablón vacío. ¡Sé el primero en publicar un trato!</Card>}
+        <div className="space-y-2.5">
+          {chollo && <OfferCard o={chollo} highlight />}
+          {others.filter((o) => o.id !== chollo?.id).map((o) => <OfferCard key={o.id} o={o} />)}
+          {mineOpen.map((o) => {
+            const earn = o.kind === "request";
             return (
-              <Card key={g.id} className="p-3 flex items-center gap-3">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${out ? "bg-red-50 text-red-500" : "bg-teal/10 text-teal"}`}>{out ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}</div>
-                {other && <Avatar name={other.name} color={other.color} size={30} avatar={other.avatar} />}
-                <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-navy">{out ? "Para" : "De"} {other?.name}</div>{g.reason && <div className="text-xs text-slate-400 truncate">{g.reason}</div>}</div>
-                <div className="text-right">
-                  <div className={`text-sm font-bold ${out ? "text-red-500" : "text-teal"}`}>{out ? "−" : "+"}{g.points} XP</div>
-                  <div className="text-[10px] font-semibold text-slate-400">{g.status === "pending" ? "pendiente" : g.status === "approved" ? "hecho" : "rechazado"}</div>
+              <Card key={o.id} className="p-4" style={{ borderLeft: "4px solid #CBD5E1" }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">{earn ? <Coins size={18} /> : <HandHeart size={18} />}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-navy truncate">{o.title}</div>
+                    <div className="text-[11px] text-slate-400 font-medium">Tu trato · {earn ? "pagas" : "cobras"} {o.points} XP · esperando que alguien lo coja</div>
+                  </div>
+                  <button onClick={() => cancel(o)} disabled={busy === o.id} className="w-9 h-9 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center active:scale-90 transition shrink-0" title="Retirar"><X size={16} /></button>
                 </div>
               </Card>
             );
           })}
         </div>
       </div>
+
+      {/* MIS TRATOS */}
+      {mine.length > 0 && (
+        <div>
+          <h4 className="font-bold text-navy text-sm mb-2 px-0.5">Mis tratos</h4>
+          <div className="space-y-2">
+            {mine.slice(0, 12).map((o) => {
+              const iAmDoer = (o.kind === "offer" && o.maker_id === me.id) || (o.kind === "request" && o.taker_id === me.id);
+              const other = o.maker_id === me.id ? o.taker_id : o.maker_id;
+              const st = o.status;
+              return (
+                <Card key={o.id} className="p-3 flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iAmDoer ? "bg-teal/10 text-teal" : "bg-red-50 text-red-500"}`}>{iAmDoer ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-navy truncate">{o.title}</div>
+                    <div className="text-[11px] text-slate-400 font-medium">{other ? (o.maker_id === me.id ? "con " : "de ") + nameOf(other) : "en el tablón"}</div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className={`text-sm font-bold ${iAmDoer ? "text-teal" : "text-red-500"}`}>{iAmDoer ? "+" : "−"}{o.points} XP</div>
+                    <div className="text-[10px] font-semibold text-slate-400">{st === "open" ? "en tablón" : st === "taken" ? "pendiente" : st === "done" ? "hecho" : st === "cancelled" ? "retirado" : "rechazado"}</div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
