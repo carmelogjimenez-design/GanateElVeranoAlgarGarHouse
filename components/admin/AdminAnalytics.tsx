@@ -84,7 +84,7 @@ export default function AdminAnalytics({ ctx }: { ctx: Ctx }) {
             <div key={p.k.id} className="flex items-center gap-3">
               <Avatar name={p.k.name} color={p.k.color} size={34} avatar={p.k.avatar} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between text-sm mb-1"><span className="font-semibold text-navy truncate">{p.k.name}</span><span className="text-slate-400 font-medium tabular-nums">{p.points} pts · Nv {p.level} · {p.approved} mis · {p.studyMin}′</span></div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between sm:gap-2 text-sm mb-1"><span className="font-semibold text-navy truncate">{p.k.name}</span><span className="text-slate-400 font-medium tabular-nums text-xs sm:text-sm shrink-0">{p.points} pts · Nv {p.level} · {p.approved} mis · {p.studyMin}′</span></div>
                 <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div className="h-2 rounded-full" style={{ width: `${(p.points / maxPts) * 100}%`, background: p.k.color }} /></div>
               </div>
             </div>

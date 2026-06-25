@@ -1,7 +1,7 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { LogOut } from "lucide-react";
+import { LogOut, MoreHorizontal } from "lucide-react";
 import Footer from "@/components/Footer";
 
 export type NavItem = { key: string; label: string; Icon: LucideIcon };
@@ -18,6 +18,11 @@ export function AppShell({
   onExit: () => void; exitLabel?: string; headerRight?: React.ReactNode; children: React.ReactNode;
 }) {
   const warm = variant === "admin";
+  const [moreOpen, setMoreOpen] = useState(false);
+  const MAXBOTTOM = 4;
+  const primary = nav.slice(0, MAXBOTTOM);
+  const rest = nav.slice(MAXBOTTOM);
+  const restActive = rest.some((n) => n.key === active);
 
   if (!warm) {
     return (
@@ -93,19 +98,44 @@ export function AppShell({
 
         <main className="flex-1 max-w-6xl w-full mx-auto px-4 md:px-8 py-5 pb-28 md:pb-10">{children}<Footer /></main>
 
+        {moreOpen && (
+          <div className="md:hidden fixed inset-0 z-30" onClick={() => setMoreOpen(false)}>
+            <div className="absolute bottom-[88px] inset-x-3 rounded-3xl p-2 grid grid-cols-2 gap-1.5"
+              style={{ background: "rgba(255,255,255,.92)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,.8)", boxShadow: "0 20px 50px -16px rgba(13,31,58,.3)" }}
+              onClick={(e) => e.stopPropagation()}>
+              {rest.map(({ key, label, Icon }) => {
+                const on = active === key;
+                return (
+                  <button key={key} onClick={() => { onChange(key); setMoreOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-3 rounded-2xl font-bold text-sm"
+                    style={on ? { background: CORAL, color: "#fff" } : { color: "#0B1F3A99" }}>
+                    <Icon size={18} strokeWidth={on ? 2.6 : 2} /> {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <nav className="md:hidden fixed bottom-3 inset-x-3 z-30 rounded-3xl"
           style={{ background: "rgba(255,255,255,.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,.8)", boxShadow: "0 14px 40px -12px rgba(255,107,94,.35)" }}>
           <div className="flex p-1.5">
-            {nav.map(({ key, label, Icon }) => {
+            {primary.map(({ key, label, Icon }) => {
               const on = active === key;
               return (
-                <button key={key} onClick={() => onChange(key)} className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl transition active:scale-90"
+                <button key={key} onClick={() => { onChange(key); setMoreOpen(false); }} className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl transition active:scale-90 min-w-0"
                   style={on ? { background: CORAL, color: "#fff", boxShadow: "0 8px 18px -6px rgba(255,107,94,.6)" } : { color: "#0B1F3A99" }}>
                   <Icon size={21} strokeWidth={on ? 2.6 : 2} />
-                  <span className="text-[10px] font-bold">{label}</span>
+                  <span className="text-[10px] font-bold truncate max-w-full px-0.5">{label}</span>
                 </button>
               );
             })}
+            {rest.length > 0 && (
+              <button onClick={() => setMoreOpen((v) => !v)} className="flex-1 flex flex-col items-center gap-0.5 py-2 rounded-2xl transition active:scale-90"
+                style={(restActive || moreOpen) ? { background: CORAL, color: "#fff", boxShadow: "0 8px 18px -6px rgba(255,107,94,.6)" } : { color: "#0B1F3A99" }}>
+                <MoreHorizontal size={21} />
+                <span className="text-[10px] font-bold">Más</span>
+              </button>
+            )}
           </div>
         </nav>
       </div>
