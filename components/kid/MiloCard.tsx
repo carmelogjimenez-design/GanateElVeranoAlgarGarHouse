@@ -48,8 +48,13 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const up = async (file: File, tag: string) => {
     try {
       const path = `milo/${me.id}/${tag}-${Date.now()}.jpg`;
-      const { error } = await sb.storage.from("evidencias").upload(path, file, { upsert: true });
-      if (error) { console.error("milo upload", error); return null; }
+      const uploadP = sb.storage.from("evidencias").upload(path, file, { upsert: true });
+      // Si la subida se atasca, no bloqueamos: a los 8s seguimos sin foto
+      const res = await Promise.race([
+        uploadP,
+        new Promise<{ error: { message: string } }>((r) => setTimeout(() => r({ error: { message: "timeout subiendo foto" } }), 8000)),
+      ]);
+      if (res && "error" in res && res.error) { console.error("milo upload", res.error); return null; }
       return sb.storage.from("evidencias").getPublicUrl(path).data.publicUrl;
     } catch (e) { console.error("milo upload throw", e); return null; }
   };
