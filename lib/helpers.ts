@@ -19,9 +19,11 @@ export async function loadAll(): Promise<DB> {
         if (limited[t]) q = q.limit(limited[t]);
         return q;
       };
-      // Algunas tablas (p.ej. kid_badges) no tienen 'created_at'. Si ordenar
-      // falla, reintentamos sin orden para que la tabla cargue igualmente.
-      let { data, error } = await build(true);
+      // Algunas tablas no tienen 'created_at' (p.ej. kid_badges usa 'earned_at').
+      // Para esas NO pedimos orden -> evitamos el 400 que ensucia la consola.
+      // El reintento sin orden queda como red de seguridad por si hubiera otra.
+      const noCreatedAt = new Set<string>(["kid_badges"]);
+      let { data, error } = await build(!noCreatedAt.has(t));
       if (error) ({ data } = await build(false));
       out[t] = data ?? [];
     })
