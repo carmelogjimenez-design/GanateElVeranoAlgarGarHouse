@@ -64,15 +64,25 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const finish = async (file: File) => {
     if (!active) return;
     setBusy(true);
-    const url = await up(file, "vuelta");
-    if (!url) { setBusy(false); return; }
+    const url = await up(file, "vuelta"); // si falla, no bloqueamos el cierre
     const mins = Math.max(0, Math.round((Date.now() - new Date(active.started_at).getTime()) / 60000));
     const pts = pointsFor(mins);
-    const { error } = await rpc("finish_milo", { p_walk: active.id, p_photo: url, p_pin: kid?.pin });
+    const { error } = await rpc("finish_milo", { p_walk: active.id, p_photo: url, p_pin: kid?.pin, p_actor: me.id });
     setBusy(false);
     if (error) { flash(error.message); sfx("reject"); return; }
     sfx("complete"); setShareFile(file); setDone({ mins, pts });
-    flash(pts > 0 ? `Paseo enviado (${mins} min · +${pts} pts) · lo validan los padres` : `Paseo de ${mins} min (muy corto para puntuar)`); refresh();
+    if (!url) flash("Paseo cerrado, pero la foto no se pudo subir. Mándala por WhatsApp 📲");
+    else flash(pts > 0 ? `Paseo enviado (${mins} min · +${pts} pts) · lo validan los padres` : `Paseo de ${mins} min (muy corto para puntuar)`);
+    refresh();
+  };
+
+  const cancelWalk = async () => {
+    if (!active || busy) return;
+    setBusy(true);
+    const { error } = await rpc("cancel_milo", { p_walk: active.id });
+    setBusy(false);
+    if (error) { flash(error.message); return; }
+    sfx("reject"); flash("Paseo cancelado. Ya puedes empezar otro 🐶"); refresh();
   };
 
   const shareWhatsApp = async (file: File | null) => {
@@ -141,6 +151,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
           </div>
           <PhotoBtn label="He vuelto · foto al entrar" tag="vuelta" onPick={finish} variant="linear-gradient(135deg,#EF4444,#FF8A5B)" />
           <p className="text-[11px] text-navy/45 font-semibold text-center mt-2 flex items-center justify-center gap-1"><DoorClosed size={12} /> No olvides pulsar al volver para cerrar el paseo</p>
+          <button onClick={cancelWalk} disabled={busy} className="w-full text-[12px] font-semibold text-navy/40 hover:text-red-500 mt-1.5 py-1 transition disabled:opacity-50">¿Atascado o te equivocaste? Cancelar paseo</button>
         </div>
       ) : (
         <div>
