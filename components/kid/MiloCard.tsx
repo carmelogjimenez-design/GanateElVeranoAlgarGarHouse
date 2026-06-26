@@ -170,7 +170,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
       {showRules && (
         <div className="text-xs text-navy/70 font-medium space-y-1.5 bg-white/50 rounded-xl p-3 mb-3">
           <p>1️⃣ Pulsa <b>«Salgo con Milo»</b> y haz una <b>foto al salir</b>. El cronómetro arranca solo.</p>
-          <p>2️⃣ Cuando vuelvas, pulsa <b>«He vuelto»</b> y haz una <b>foto al entrar</b>. ⚠️ Son <b>DOS pulsaciones</b>: una al salir y otra al volver.</p>
+          <p>2️⃣ Cuando vuelvas, pulsa <b>«He vuelto · cerrar paseo»</b> para terminar. ⚠️ Son <b>DOS pulsaciones</b>: una al salir y otra al volver.</p>
           <p>3️⃣ Los puntos dependen del tiempo: <b>20 min → 1</b> · <b>35 min → 2</b> · <b>1 h → 3</b> · <b>1 h 30 → 5</b>.</p>
           <p>4️⃣ <b>Envía la foto al grupo de WhatsApp</b> de la familia. 📲 Después, <b>los padres validan</b> el paseo y se suman los puntos.</p>
         </div>
@@ -188,12 +188,11 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
           </div>
           {iStarted ? (
             <>
-              <PhotoBtn label="He vuelto · foto al entrar" tag="vuelta" onPick={(f) => finish(f)} variant="linear-gradient(135deg,#EF4444,#FF8A5B)" />
-              <p className="text-[11px] text-navy/45 font-semibold text-center mt-2 flex items-center justify-center gap-1"><DoorClosed size={12} /> Si la cámara no va, usa el botón de abajo. La foto la mandáis por WhatsApp.</p>
-              <button onClick={() => finish(null)} disabled={busy} className="w-full font-bold rounded-xl px-4 py-3 text-sm mt-2 flex items-center justify-center gap-2 active:scale-95 transition disabled:opacity-50 bg-white text-navy border-2 border-navy/15 hover:border-navy/30">
-                <DoorClosed size={16} /> Cerrar paseo sin foto
+              <button onClick={() => finish(null)} disabled={busy} className="w-full font-bold rounded-xl px-4 py-3.5 text-sm flex items-center justify-center gap-2 text-white active:scale-95 transition disabled:opacity-50" style={{ background: "linear-gradient(135deg,#EF4444,#FF8A5B)" }}>
+                <DoorClosed size={18} /> He vuelto · cerrar paseo
               </button>
-              <button onClick={cancelWalk} disabled={busy} className="w-full text-[12px] font-semibold text-navy/40 hover:text-red-500 mt-2 py-1 transition disabled:opacity-50 flex items-center justify-center gap-1"><RotateCcw size={12} /> ¿Atascado o te equivocaste? Cancelar paseo</button>
+              <p className="text-[11px] text-navy/45 font-semibold text-center mt-2">Pulsa al volver para cerrar el paseo. La foto la mandáis al grupo de WhatsApp 📲</p>
+              <button onClick={cancelWalk} disabled={busy} className="w-full text-[12px] font-semibold text-navy/40 hover:text-red-500 mt-1.5 py-1 transition disabled:opacity-50 flex items-center justify-center gap-1"><RotateCcw size={12} /> ¿Atascado o te equivocaste? Cancelar paseo</button>
             </>
           ) : (
             <div className="rounded-xl px-3 py-2.5 text-xs font-semibold text-center bg-slate-50 text-navy/55">🔒 Lo tiene que cerrar <b>{activeKid?.name || "quien lo empezó"}</b> o los padres.</div>
