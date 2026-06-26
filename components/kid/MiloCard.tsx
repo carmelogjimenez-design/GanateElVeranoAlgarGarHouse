@@ -20,6 +20,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const pendingReview = todays.some((w) => w.status === "pending");
   const active = walks.find((w) => w.status === "in_progress") || null;
   const activeKid = active ? db.kids.find((k) => k.id === active.kid_id) : null;
+  const iStarted = !!active && active.kid_id === me.id;
 
   const [busy, setBusy] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -67,7 +68,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
     const url = await up(file, "vuelta"); // si falla, no bloqueamos el cierre
     const mins = Math.max(0, Math.round((Date.now() - new Date(active.started_at).getTime()) / 60000));
     const pts = pointsFor(mins);
-    const { error } = await rpc("finish_milo", { p_walk: active.id, p_photo: url, p_pin: kid?.pin, p_actor: me.id });
+    const { error } = await rpc("finish_milo", { p_walk: active.id, p_photo: url, p_pin: kid?.pin });
     setBusy(false);
     if (error) { flash(error.message); sfx("reject"); return; }
     sfx("complete"); setShareFile(file); setDone({ mins, pts });
@@ -79,7 +80,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const cancelWalk = async () => {
     if (!active || busy) return;
     setBusy(true);
-    const { error } = await rpc("cancel_milo", { p_walk: active.id });
+    const { error } = await rpc("cancel_milo", { p_walk: active.id, p_pin: kid?.pin });
     setBusy(false);
     if (error) { flash(error.message); return; }
     sfx("reject"); flash("Paseo cancelado. Ya puedes empezar otro 🐶"); refresh();
@@ -149,9 +150,15 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
               {nt ? ` · aguanta a ${nt[0]} min para +${nt[1]}` : " · ¡máximo!"}
             </div>
           </div>
-          <PhotoBtn label="He vuelto · foto al entrar" tag="vuelta" onPick={finish} variant="linear-gradient(135deg,#EF4444,#FF8A5B)" />
-          <p className="text-[11px] text-navy/45 font-semibold text-center mt-2 flex items-center justify-center gap-1"><DoorClosed size={12} /> No olvides pulsar al volver para cerrar el paseo</p>
-          <button onClick={cancelWalk} disabled={busy} className="w-full text-[12px] font-semibold text-navy/40 hover:text-red-500 mt-1.5 py-1 transition disabled:opacity-50">¿Atascado o te equivocaste? Cancelar paseo</button>
+          {iStarted ? (
+            <>
+              <PhotoBtn label="He vuelto · foto al entrar" tag="vuelta" onPick={finish} variant="linear-gradient(135deg,#EF4444,#FF8A5B)" />
+              <p className="text-[11px] text-navy/45 font-semibold text-center mt-2 flex items-center justify-center gap-1"><DoorClosed size={12} /> No olvides pulsar al volver para cerrar el paseo</p>
+              <button onClick={cancelWalk} disabled={busy} className="w-full text-[12px] font-semibold text-navy/40 hover:text-red-500 mt-1.5 py-1 transition disabled:opacity-50">¿Atascado o te equivocaste? Cancelar paseo</button>
+            </>
+          ) : (
+            <div className="rounded-xl px-3 py-2.5 text-xs font-semibold text-center bg-slate-50 text-navy/55">🔒 Lo tiene que cerrar <b>{activeKid?.name || "quien lo empezó"}</b> o los padres.</div>
+          )}
         </div>
       ) : (
         <div>

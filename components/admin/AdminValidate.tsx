@@ -13,6 +13,7 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const gif = db.gifts.filter((g) => g.status === "pending");
   const sr = db.study_rewards.filter((r) => r.status === "pending");
   const milo = (db.milo_walks || []).filter((w) => w.status === "pending");
+  const miloLive = (db.milo_walks || []).filter((w) => w.status === "in_progress");
   const market = (db.market_offers || []).filter((o) => o.status === "submitted");
   const newKids = db.kids.filter((k) => k.user_id && k.status === "pending");
   const call = async (fn: string, args: Record<string, unknown>, msg: string) => {
@@ -69,10 +70,10 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
         </div>
       )}
 
-      {view === "pendiente" && nothingPending && (
+      {view === "pendiente" && nothingPending && miloLive.length === 0 && (
         <Card className="p-8 text-center text-slate-400 font-medium">Nada pendiente. Reina la paz… por ahora.</Card>
       )}
-      {view === "pendiente" && !nothingPending && (
+      {view === "pendiente" && !(nothingPending && miloLive.length === 0) && (
       <div className="space-y-5">
       {newKids.length > 0 && (
         <Section title="Nuevos hijos por autorizar">
@@ -109,6 +110,22 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
                 <div className="flex gap-2">
                   <Btn variant="teal" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => call("approve_assignment", { p_assignment: a.id }, "Validada. +" + a.points + " XP")}><Check size={16} /> Validar</Btn>
                   <Btn variant="ghost" className="flex-1 flex items-center justify-center gap-1.5" onClick={() => { const p = prompt("Penalización en XP (0 = ninguna):", "0"); call("reject_assignment", { p_assignment: a.id, p_penalty: +(p || 0) }, "Rechazada."); }}><X size={16} /> Rechazar</Btn>
+                </div>
+              </Card>
+            );
+          })}
+        </Section>
+      )}
+      {miloLive.length > 0 && (
+        <Section title="Paseos en marcha">
+          {miloLive.map((w) => {
+            const k = kidOf(w.kid_id);
+            return (
+              <Card key={w.id} className="p-4">
+                <div className="flex items-center gap-3">
+                  {k && <Avatar name={k.name} color={k.color} size={36} avatar={k.avatar} />}
+                  <div className="flex-1 min-w-0"><div className="font-semibold text-navy truncate">🐶 Milo de paseo · {k?.name || "?"}</div><div className="text-xs text-slate-400">Empezó {new Date(w.started_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}</div></div>
+                  <Btn variant="ghost" className="flex items-center gap-1.5 text-red-500" onClick={() => call("cancel_milo", { p_walk: w.id }, "Paseo cancelado")}><X size={16} /> Cancelar</Btn>
                 </div>
               </Card>
             );
