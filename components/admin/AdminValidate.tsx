@@ -5,7 +5,7 @@ import { rpc } from "@/lib/helpers";
 import type { Ctx, Assignment } from "@/lib/types";
 import { Check, X, RotateCcw, ClipboardCheck, Target, Dog, Store, ShoppingBag, Gift, BookOpen, UserPlus, Image as ImageIcon, Undo2, CheckCheck, ChevronLeft } from "lucide-react";
 
-type VItem = { id: string; color: string; body: ReactNode; approve: () => Promise<unknown>; reject: () => Promise<unknown>; approveLabel: string };
+type VItem = { id: string; color: string; body: ReactNode; approve: () => Promise<void>; reject: () => Promise<void>; approveLabel: string };
 type Group = { key: string; title: string; icon: ReactNode; color: string; items: VItem[] };
 
 function useIsMobile() {
@@ -37,7 +37,7 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
   const [leaving, setLeaving] = useState<Set<string>>(new Set());
   const [undoBar, setUndoBar] = useState<{ key: string; label: string; onUndo: () => void } | null>(null);
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const pendingFns = useRef<Map<string, () => Promise<unknown>>>(new Map());
+  const pendingFns = useRef<Map<string, () => Promise<void>>>(new Map());
 
   useEffect(() => {
     const flushAll = () => { pendingFns.current.forEach((fn) => { fn().catch(() => {}); }); };
@@ -49,7 +49,7 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
     };
   }, []);
 
-  const run = (ids: string[], fns: (() => Promise<unknown>)[], label: string) => {
+  const run = (ids: string[], fns: (() => Promise<void>)[], label: string) => {
     const key = ids.join("|") + ":" + Date.now();
     setLeaving((p) => new Set([...p, ...ids]));
     setTimeout(() => {
@@ -110,8 +110,8 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
     key: "asg", title: "Misiones para revisar", icon: <Target size={16} />, color: "#FF8A00",
     items: asg.map((a) => ({
       id: a.id, color: "#FF8A00", approveLabel: "Validada",
-      approve: () => rpc("approve_assignment", { p_assignment: a.id }),
-      reject: () => rpc("reject_assignment", { p_assignment: a.id, p_penalty: 0 }),
+      approve: async () => { await rpc("approve_assignment", { p_assignment: a.id }); },
+      reject: async () => { await rpc("reject_assignment", { p_assignment: a.id, p_penalty: 0 }); },
       body: <>{kidRow(a.kid_id, a.title, `${kidOf(a.kid_id)?.name || ""}${a.note ? ` · "${a.note}"` : ""}`, <Chip tone="brand">+{a.points} XP</Chip>)}{a.photo_url ? photoBox(a.photo_url) : photoBox(undefined)}</>,
     })),
   });
@@ -119,8 +119,8 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
     key: "milo", title: "Paseos de Milo", icon: <Dog size={16} />, color: "#16A34A",
     items: milo.map((w) => ({
       id: w.id, color: "#16A34A", approveLabel: "Paseo validado",
-      approve: () => rpc("approve_milo", { p_walk: w.id }),
-      reject: () => rpc("reject_milo", { p_walk: w.id }),
+      approve: async () => { await rpc("approve_milo", { p_walk: w.id }); },
+      reject: async () => { await rpc("reject_milo", { p_walk: w.id }); },
       body: <>{kidRow(w.kid_id, `🐶 Paseo de Milo · ${w.minutes ?? 0} min`, kidOf(w.kid_id)?.name || "", <Chip tone="brand">+{w.points ?? 0} XP</Chip>)}
         <div className="grid grid-cols-2 gap-2 mt-3">
           <div><div className="text-[10px] font-bold text-slate-400 mb-1 uppercase">Salida</div>{w.start_photo ? <a href={w.start_photo} target="_blank" rel="noreferrer"><img src={w.start_photo} alt="salida" className="w-full h-32 object-cover rounded-xl" /></a> : <div className="w-full h-32 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-300">sin foto</div>}</div>
@@ -135,8 +135,8 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
       const doer = o.kind === "offer" ? maker : taker, payer = o.kind === "offer" ? taker : maker;
       return {
         id: o.id, color: "#A855F7", approveLabel: "Trato cerrado",
-        approve: () => rpc("approve_market", { p_offer: o.id }),
-        reject: () => rpc("reject_market", { p_offer: o.id }),
+        approve: async () => { await rpc("approve_market", { p_offer: o.id }); },
+        reject: async () => { await rpc("reject_market", { p_offer: o.id }); },
         body: <><div className="flex items-center gap-2 mb-2"><span className="text-[11px] font-bold px-2 py-0.5 rounded-md" style={o.kind === "request" ? { background: "#19D3AE1a", color: "#0E9C82" } : { background: "#FF6B5E1a", color: "#E05546" }}>{o.kind === "request" ? "🙏 Petición" : "💪 Oferta"}</span><div className="font-bold text-navy truncate flex-1">{o.title}</div><Chip tone="brand">{o.points} XP</Chip></div>
           <div className="flex items-center gap-2 text-sm flex-wrap">{doer && <span className="flex items-center gap-1.5 font-semibold text-teal"><Avatar name={doer.name} color={doer.color} size={22} avatar={doer.avatar} />{doer.name} <span className="text-slate-400 font-medium">+{o.points}</span></span>}<span className="text-slate-300">·</span>{payer && <span className="flex items-center gap-1.5 font-semibold text-red-500"><Avatar name={payer.name} color={payer.color} size={22} avatar={payer.avatar} />{payer.name} <span className="text-slate-400 font-medium">−{o.points}</span></span>}</div></>,
       };
@@ -146,8 +146,8 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
     key: "red", title: "Canjes de la tienda", icon: <ShoppingBag size={16} />, color: "#19D3AE",
     items: red.map((r) => ({
       id: r.id, color: "#19D3AE", approveLabel: "Canje aprobado",
-      approve: () => rpc("approve_redemption", { p_id: r.id }),
-      reject: () => rpc("reject_redemption", { p_id: r.id }),
+      approve: async () => { await rpc("approve_redemption", { p_id: r.id }); },
+      reject: async () => { await rpc("reject_redemption", { p_id: r.id }); },
       body: kidRow(r.kid_id, r.title, kidOf(r.kid_id)?.name || "", <Chip tone="teal">{r.cost} XP</Chip>),
     })),
   });
@@ -155,8 +155,8 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
     key: "gift", title: "Mercado de XP", icon: <Gift size={16} />, color: "#EC4899",
     items: gif.map((g) => ({
       id: g.id, color: "#EC4899", approveLabel: "Transferencia hecha",
-      approve: () => rpc("approve_gift", { p_id: g.id }),
-      reject: () => rpc("reject_gift", { p_id: g.id }),
+      approve: async () => { await rpc("approve_gift", { p_id: g.id }); },
+      reject: async () => { await rpc("reject_gift", { p_id: g.id }); },
       body: <><div className="font-bold text-navy mb-1">{kidOf(g.from_kid)?.name} → {kidOf(g.to_kid)?.name} · {g.points} XP</div><div className="text-xs text-slate-400">{g.reason || "Sin motivo"}</div></>,
     })),
   });
@@ -164,8 +164,8 @@ export default function AdminValidate({ ctx }: { ctx: Ctx }) {
     key: "sr", title: "Recompensas de estudio", icon: <BookOpen size={16} />, color: "#3B82F6",
     items: sr.map((r) => ({
       id: r.id, color: "#3B82F6", approveLabel: "Recompensa aprobada",
-      approve: () => rpc("approve_study_reward", { p_id: r.id }),
-      reject: () => rpc("reject_study_reward", { p_id: r.id }),
+      approve: async () => { await rpc("approve_study_reward", { p_id: r.id }); },
+      reject: async () => { await rpc("reject_study_reward", { p_id: r.id }); },
       body: kidRow(r.kid_id, `${kidOf(r.kid_id)?.name} · 1 hora de estudio`, `${Math.floor(r.seconds / 60)} min · ${r.day}`, <Chip tone="brand">+{r.points} pts</Chip>),
     })),
   });
