@@ -5,7 +5,7 @@ import { sb } from "@/lib/supabase";
 import { rpc, todayStr } from "@/lib/helpers";
 import { missionIcon, freqColor, FREQ_META } from "@/lib/icons";
 import type { Ctx, Task } from "@/lib/types";
-import { Plus, Trash2, Repeat, CalendarClock, Clock, Search, ChevronDown, Target, Layers, Sparkles, X } from "lucide-react";
+import { Plus, Trash2, Repeat, CalendarClock, Clock, Search, ChevronDown, Target, Layers, Sparkles, X, Lightbulb } from "lucide-react";
 
 function AssignModal({ ctx, task, onClose }: { ctx: Ctx; task: Task; onClose: () => void }) {
   const { db, refresh, flash } = ctx;
@@ -87,18 +87,6 @@ function RecurringModal({ ctx, task, onClose }: { ctx: Ctx; task: Task; onClose:
 
 const FREQ_ORDER: [string, string][] = [["diaria", "Diarias"], ["2/semana", "2 por semana"], ["semanal", "Semanales"], ["quincenal", "Quincenales"], ["mensual", "Mensuales"], ["personalizada", "Personalizadas"]];
 
-function MiniStat({ icon, value, label, accent }: { icon: React.ReactNode; value: React.ReactNode; label: string; accent: string }) {
-  return (
-    <div className="flex-1 bg-white border border-slate-200 rounded-2xl shadow-card px-3 py-2.5 flex items-center gap-2.5">
-      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${accent}15`, color: accent }}>{icon}</div>
-      <div className="min-w-0">
-        <div className="text-xl font-extrabold text-navy leading-none tracking-tight">{value}</div>
-        <div className="text-[11px] font-semibold text-slate-400 truncate">{label}</div>
-      </div>
-    </div>
-  );
-}
-
 export default function AdminTasks({ ctx }: { ctx: Ctx }) {
   const { db, refresh, flash } = ctx;
   const [f, setF] = useState({ title: "", description: "", points: 20, difficulty: "media", frequency: "diaria", photo_required: false });
@@ -108,6 +96,7 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
   const [q, setQ] = useState("");
   const [filterFreq, setFilterFreq] = useState<string>("all");
 
+  const activeCount = useMemo(() => db.tasks.filter((t) => t.active).length, [db.tasks]);
   const recurringCount = useMemo(() => new Set(db.task_targets.map((tt) => tt.task_id)).size, [db.task_targets]);
   const generatedToday = useMemo(() => db.assignments.filter((a) => a.due_date === todayStr()).length, [db.assignments]);
 
@@ -142,29 +131,50 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
     .filter((g) => g.group.length > 0);
   const visibleCount = groups.reduce((acc, g) => acc + g.group.length, 0);
 
+  const heroStats = [
+    { label: "Activas", value: activeCount },
+    { label: "Recurrentes", value: recurringCount },
+    { label: "Generadas hoy", value: generatedToday },
+  ];
+
   return (
-    <div className="pb-6">
-      {/* Resumen + acción principal */}
-      <div className="flex flex-wrap items-stretch gap-2 mb-3">
-        <MiniStat icon={<Layers size={17} />} value={db.tasks.length} label="Misiones" accent="#FF8A00" />
-        <MiniStat icon={<Repeat size={17} />} value={recurringCount} label="Recurrentes" accent="#14B8A6" />
-        <MiniStat icon={<Sparkles size={17} />} value={generatedToday} label="Generadas hoy" accent="#3B82F6" />
-        <button onClick={generate} className="shrink-0 bg-teal text-white font-bold rounded-2xl px-4 py-2.5 text-sm flex items-center gap-1.5 shadow-card active:scale-95 transition">
-          <CalendarClock size={16} /> Generar hoy
-        </button>
+    <div className="space-y-5 pb-6">
+      {/* ===== HÉROE · CATÁLOGO ===== */}
+      <div className="relative overflow-hidden rounded-[26px] p-6 sm:p-7 text-white" style={{ background: "linear-gradient(135deg,#FF6B5E 0%,#FF8A4C 55%,#FF9F45 100%)", boxShadow: "0 24px 60px -24px rgba(255,107,94,.6)" }}>
+        <div className="absolute -top-16 -right-8 w-56 h-56 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,.16)", filter: "blur(6px)" }} />
+        <div className="absolute -bottom-20 -left-10 w-52 h-52 rounded-full pointer-events-none" style={{ background: "rgba(255,255,255,.10)", filter: "blur(8px)" }} />
+        <div className="relative">
+          <div className="text-[11px] font-bold tracking-[.2em] uppercase text-white/75">Catálogo de misiones</div>
+          <h2 className="text-2xl sm:text-[28px] font-black tracking-tight mt-1 leading-tight">
+            {db.tasks.length} {db.tasks.length === 1 ? "misión" : "misiones"} en la casa
+          </h2>
+          <p className="text-white/80 text-sm font-medium mt-1.5">Crea, asigna y deja que se generen solas cada día.</p>
+
+          <div className="flex flex-wrap items-center gap-2.5 mt-5">
+            {heroStats.map((s) => (
+              <div key={s.label} className="rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,255,255,.15)" }}>
+                <div className="text-xl font-black tabular-nums leading-none">{s.value}</div>
+                <div className="text-[11px] font-semibold text-white/75 mt-1">{s.label}</div>
+              </div>
+            ))}
+            <button onClick={generate} className="sm:ml-auto flex items-center gap-2 rounded-2xl px-5 py-3 font-bold text-[15px] active:scale-95 transition shadow-lg" style={{ background: "#fff", color: "#FF6B5E" }}>
+              <CalendarClock size={17} /> Generar hoy
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Nueva misión (plegable) */}
-      <Card className="mb-3 overflow-hidden">
-        <button onClick={() => setShowForm((v) => !v)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-          <span className="flex items-center gap-2 font-bold text-navy tracking-tight">
-            <span className="w-7 h-7 rounded-xl bg-brand text-white flex items-center justify-center"><Plus size={16} /></span>
-            Nueva misión
+      {/* ===== NUEVA MISIÓN (plegable) ===== */}
+      <Card className="overflow-hidden">
+        <button onClick={() => setShowForm((v) => !v)} className="w-full flex items-center justify-between p-5 text-left">
+          <span className="flex items-center gap-3 font-bold text-navy tracking-tight">
+            <span className="w-10 h-10 rounded-2xl bg-brand text-white flex items-center justify-center shrink-0"><Plus size={20} /></span>
+            <span><span className="block">Nueva misión</span><span className="block text-[12px] font-medium text-slate-400">Añade una tarea al catálogo</span></span>
           </span>
-          <ChevronDown size={18} className={`text-slate-400 transition ${showForm ? "rotate-180" : ""}`} />
+          <ChevronDown size={20} className={`text-slate-400 transition ${showForm ? "rotate-180" : ""}`} />
         </button>
         {showForm && (
-          <div className="px-4 pb-4 space-y-2.5 border-t border-slate-100 pt-3">
+          <div className="px-5 pb-5 space-y-2.5 border-t border-slate-100 pt-4">
             <Input value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="Título (ej. Conquista la cocina)" />
             <Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Descripción (opcional)" />
             <div className="flex gap-2">
@@ -183,43 +193,46 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
         )}
       </Card>
 
-      {/* Buscador + filtros por frecuencia */}
-      <div className="relative mb-2.5">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar misión…" className="w-full border border-slate-200 bg-white rounded-xl pl-10 pr-9 py-2.5 text-[15px] outline-none focus:border-brand transition" />
-        {q && <button onClick={() => setQ("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
-      </div>
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-1 -mx-1 px-1">
-        <FilterChip active={filterFreq === "all"} onClick={() => setFilterFreq("all")} color="#0B1F3A" label={`Todas · ${db.tasks.length}`} />
-        {FREQ_ORDER.map(([freq, label]) => {
-          const n = db.tasks.filter((t) => t.frequency === freq).length;
-          if (!n) return null;
-          return <FilterChip key={freq} active={filterFreq === freq} onClick={() => setFilterFreq(freq)} color={freqColor(freq)} label={`${label} · ${n}`} />;
-        })}
-      </div>
+      {/* ===== BUSCADOR + FILTROS ===== */}
+      <Card className="p-4">
+        <div className="relative mb-3">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar misión…" className="w-full border border-slate-200 bg-slate-50 rounded-xl pl-10 pr-9 py-3 text-[15px] outline-none focus:border-brand focus:bg-white transition" />
+          {q && <button onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"><X size={16} /></button>}
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+          <FilterChip active={filterFreq === "all"} onClick={() => setFilterFreq("all")} color="#0B1F3A" label={`Todas · ${db.tasks.length}`} />
+          {FREQ_ORDER.map(([freq, label]) => {
+            const n = db.tasks.filter((t) => t.frequency === freq).length;
+            if (!n) return null;
+            return <FilterChip key={freq} active={filterFreq === freq} onClick={() => setFilterFreq(freq)} color={freqColor(freq)} label={`${label} · ${n}`} />;
+          })}
+        </div>
+      </Card>
 
-      {/* Catálogo */}
+      {/* ===== CATÁLOGO ===== */}
       {groups.map(({ freq, label, group }) => {
         const col = freqColor(freq);
         return (
-          <div key={freq} className="mb-5">
-            <div className="flex items-center gap-2 mb-2 px-0.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: col }} />
-              <span className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</span>
-              <span className="text-xs font-semibold text-slate-300">· {group.length}</span>
+          <div key={freq}>
+            <div className="flex items-center gap-2.5 mb-3 px-1">
+              <span className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${col}1a`, color: col }}><CalendarClock size={16} /></span>
+              <h3 className="font-bold text-navy tracking-tight">{label}</h3>
+              <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full tabular-nums" style={{ background: col }}>{group.length}</span>
             </div>
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {group.map((t) => {
                 const Icon = missionIcon(t.title);
                 const targets = db.task_targets.filter((tt) => tt.task_id === t.id).length;
                 const open = t.scope === "open";
                 return (
-                  <Card key={t.id} className="p-3.5 relative overflow-hidden" style={{ borderLeft: `4px solid ${col}` }}>
-                    <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-sm" style={{ background: col }}><Icon size={22} /></div>
+                  <Card key={t.id} className="p-5 relative overflow-hidden" style={{ borderLeft: `5px solid ${col}` }}>
+                    <div className="absolute -top-10 -right-8 w-28 h-28 rounded-full pointer-events-none" style={{ background: `${col}0f` }} />
+                    <div className="relative flex items-start gap-3.5">
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shrink-0" style={{ background: col, boxShadow: `0 10px 24px -10px ${col}` }}><Icon size={26} /></div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-navy leading-tight">{t.title}</div>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <div className="font-black text-navy leading-tight tracking-tight">{t.title}</div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
                           <div className="flex items-center gap-1 rounded-lg pl-1.5 pr-1 py-0.5" style={{ background: `${col}18`, border: `1px solid ${col}55` }}>
                             <span className="font-bold text-xs" style={{ color: col }}>+</span>
                             <input type="number" defaultValue={t.points} onBlur={(e) => savePoints(t.id, +e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }} className="w-10 bg-transparent font-bold text-sm text-center outline-none" style={{ color: col }} />
@@ -235,10 +248,10 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      <Btn variant="ghost" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setRecTask(t)}><Repeat size={15} /> Recurrente</Btn>
-                      <Btn variant="primary" className="flex-1 text-sm py-2 flex items-center justify-center gap-1.5" onClick={() => setAsgTask(t)}><Target size={15} /> Asignar</Btn>
-                      <button onClick={async () => { if (confirm(`¿Eliminar "${t.title}"?`)) { await sb.from("tasks").delete().eq("id", t.id); refresh(); } }} className="text-slate-300 hover:text-red-400 px-2"><Trash2 size={17} /></button>
+                    <div className="relative flex gap-2 mt-4">
+                      <Btn variant="ghost" className="flex-1 text-sm py-2.5 flex items-center justify-center gap-1.5" onClick={() => setRecTask(t)}><Repeat size={15} /> Recurrente</Btn>
+                      <Btn variant="primary" className="flex-1 text-sm py-2.5 flex items-center justify-center gap-1.5" onClick={() => setAsgTask(t)}><Target size={15} /> Asignar</Btn>
+                      <button onClick={async () => { if (confirm(`¿Eliminar "${t.title}"?`)) { await sb.from("tasks").delete().eq("id", t.id); refresh(); } }} className="w-11 rounded-xl flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition"><Trash2 size={18} /></button>
                     </div>
                   </Card>
                 );
@@ -248,7 +261,7 @@ export default function AdminTasks({ ctx }: { ctx: Ctx }) {
         );
       })}
 
-      {db.tasks.length === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">Aún no hay misiones. Pulsa «Nueva misión» para crear la primera.</Card>}
+      {db.tasks.length === 0 && <Card className="p-8 text-center"><div className="w-14 h-14 rounded-2xl bg-orange-50 text-brand flex items-center justify-center mx-auto mb-3"><Lightbulb size={26} /></div><p className="font-bold text-navy">Empieza tu catálogo</p><p className="text-sm text-slate-400 font-medium mt-1">Pulsa «Nueva misión» y crea la primera tarea de la casa.</p></Card>}
       {db.tasks.length > 0 && visibleCount === 0 && <Card className="p-6 text-center text-slate-400 text-sm font-medium">Ninguna misión coincide con el filtro. <button onClick={() => { setQ(""); setFilterFreq("all"); }} className="text-brand font-semibold">Quitar filtros</button></Card>}
 
       {asgTask && <AssignModal ctx={ctx} task={asgTask} onClose={() => setAsgTask(null)} />}
