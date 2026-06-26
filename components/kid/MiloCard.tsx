@@ -46,44 +46,51 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const nt = nextTier(elapsedMin);
 
   const up = async (file: File, tag: string) => {
-    const path = `milo/${me.id}/${tag}-${Date.now()}.jpg`;
-    const { error } = await sb.storage.from("evidencias").upload(path, file, { upsert: true });
-    if (error) { flash("No se pudo subir la foto"); return null; }
-    return sb.storage.from("evidencias").getPublicUrl(path).data.publicUrl;
+    try {
+      const path = `milo/${me.id}/${tag}-${Date.now()}.jpg`;
+      const { error } = await sb.storage.from("evidencias").upload(path, file, { upsert: true });
+      if (error) { console.error("milo upload", error); return null; }
+      return sb.storage.from("evidencias").getPublicUrl(path).data.publicUrl;
+    } catch (e) { console.error("milo upload throw", e); return null; }
   };
 
   const start = async (file: File) => {
+    if (busy) return;
     setBusy(true); setDone(null);
-    const url = await up(file, "salida");
-    if (!url) { setBusy(false); return; }
-    const { error } = await rpc("start_milo", { p_kid: me.id, p_photo: url, p_pin: kid?.pin });
-    setBusy(false);
-    if (error) { flash(error.message); sfx("reject"); return; }
-    sfx("claim"); setShareFile(file); flash("¡En marcha! El cronómetro ya corre 🐶"); refresh();
+    try {
+      const url = await up(file, "salida");
+      const { error } = await rpc("start_milo", { p_kid: me.id, p_photo: url, p_pin: kid?.pin });
+      if (error) { console.error("start_milo", error); flash("No se pudo empezar: " + (error.message || error.code || "error")); sfx("reject"); return; }
+      sfx("claim"); setShareFile(file); flash(url ? "¡En marcha! El cronómetro ya corre 🐶" : "¡En marcha! (la foto no subió, mándala por WhatsApp)"); refresh();
+    } catch (e) { console.error("start error", e); flash("Error al empezar: " + ((e as Error)?.message || "desconocido")); sfx("reject"); }
+    finally { setBusy(false); }
   };
 
   const finish = async (file: File) => {
-    if (!active) return;
+    if (!active || busy) return;
     setBusy(true);
-    const url = await up(file, "vuelta"); // si falla, no bloqueamos el cierre
-    const mins = Math.max(0, Math.round((Date.now() - new Date(active.started_at).getTime()) / 60000));
-    const pts = pointsFor(mins);
-    const { error } = await rpc("finish_milo", { p_walk: active.id, p_photo: url, p_pin: kid?.pin });
-    setBusy(false);
-    if (error) { flash(error.message); sfx("reject"); return; }
-    sfx("complete"); setShareFile(file); setDone({ mins, pts });
-    if (!url) flash("Paseo cerrado, pero la foto no se pudo subir. Mándala por WhatsApp 📲");
-    else flash(pts > 0 ? `Paseo enviado (${mins} min · +${pts} pts) · lo validan los padres` : `Paseo de ${mins} min (muy corto para puntuar)`);
-    refresh();
+    try {
+      const url = await up(file, "vuelta"); // si falla, no bloqueamos el cierre
+      const mins = Math.max(0, Math.round((Date.now() - new Date(active.started_at).getTime()) / 60000));
+      const pts = pointsFor(mins);
+      const { error } = await rpc("finish_milo", { p_walk: active.id, p_photo: url, p_pin: kid?.pin });
+      if (error) { console.error("finish_milo", error); flash("No se pudo cerrar: " + (error.message || error.code || "error")); sfx("reject"); return; }
+      sfx("complete"); setShareFile(file); setDone({ mins, pts });
+      flash(!url ? "Paseo cerrado · la foto no subió, mándala por WhatsApp 📲" : pts > 0 ? `Paseo enviado (${mins} min · +${pts} pts) · lo validan los padres` : `Paseo de ${mins} min (muy corto para puntuar)`);
+      refresh();
+    } catch (e) { console.error("finish error", e); flash("Error al cerrar el paseo: " + ((e as Error)?.message || "desconocido")); sfx("reject"); }
+    finally { setBusy(false); }
   };
 
   const cancelWalk = async () => {
     if (!active || busy) return;
     setBusy(true);
-    const { error } = await rpc("cancel_milo", { p_walk: active.id, p_pin: kid?.pin });
-    setBusy(false);
-    if (error) { flash(error.message); return; }
-    sfx("reject"); flash("Paseo cancelado. Ya puedes empezar otro 🐶"); refresh();
+    try {
+      const { error } = await rpc("cancel_milo", { p_walk: active.id, p_pin: kid?.pin });
+      if (error) { console.error("cancel_milo", error); flash("No se pudo cancelar: " + (error.message || error.code || "error")); return; }
+      sfx("reject"); flash("Paseo cancelado. Ya puedes empezar otro 🐶"); refresh();
+    } catch (e) { console.error("cancel error", e); flash("Error al cancelar el paseo"); }
+    finally { setBusy(false); }
   };
 
   const shareWhatsApp = async (file: File | null) => {
