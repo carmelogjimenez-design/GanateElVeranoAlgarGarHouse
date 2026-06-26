@@ -34,6 +34,11 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
     return () => clearInterval(t);
   }, [active]);
 
+  // SEGURO: si 'busy' se quedó colgado en true de un intento anterior,
+  // se libera en cuanto cambie el paseo activo (o desaparezca). Así nunca
+  // se queda un botón muerto que ignore los clicks en silencio.
+  useEffect(() => { setBusy(false); }, [active?.id]);
+
   const elapsedMs = active ? Math.max(0, now - new Date(active.started_at).getTime()) : 0;
   const elapsedMin = Math.floor(elapsedMs / 60000);
   const clock = () => {
@@ -45,56 +50,63 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const livePts = pointsFor(elapsedMin);
   const nt = nextTier(elapsedMin);
 
+  // Sube la foto sin bloquear: si se atasca, a los 6s seguimos sin foto.
   const up = async (file: File, tag: string) => {
     try {
       const path = `milo/${me.id}/${tag}-${Date.now()}.jpg`;
       const uploadP = sb.storage.from("evidencias").upload(path, file, { upsert: true });
-      // Si la subida se atasca, no bloqueamos: a los 8s seguimos sin foto
       const res = await Promise.race([
         uploadP,
-        new Promise<{ error: { message: string } }>((r) => setTimeout(() => r({ error: { message: "timeout subiendo foto" } }), 8000)),
+        new Promise<{ error: { message: string } }>((r) => setTimeout(() => r({ error: { message: "timeout subiendo foto" } }), 6000)),
       ]);
-      if (res && "error" in res && res.error) { console.error("milo upload", res.error); return null; }
+      if (res && "error" in res && res.error) { console.warn("[milo] up() foto no subió:", res.error); return null; }
       return sb.storage.from("evidencias").getPublicUrl(path).data.publicUrl;
-    } catch (e) { console.error("milo upload throw", e); return null; }
+    } catch (e) { console.warn("[milo] up() throw:", e); return null; }
   };
 
   const start = async (file: File) => {
+    console.log("[milo] start()", { busy, active: active?.id });
     if (busy) return;
     setBusy(true); setDone(null);
     try {
       const url = await up(file, "salida");
       const { error } = await rpc("start_milo", { p_kid: me.id, p_photo: url, p_pin: kid?.pin });
-      if (error) { console.error("start_milo", error); flash("No se pudo empezar: " + (error.message || error.code || "error")); sfx("reject"); return; }
+      if (error) { console.error("[milo] start_milo error:", error); flash("No se pudo empezar: " + (error.message || error.code || "error")); sfx("reject"); return; }
       sfx("claim"); setShareFile(file); flash(url ? "¡En marcha! El cronómetro ya corre 🐶" : "¡En marcha! (la foto no subió, mándala por WhatsApp)"); refresh();
-    } catch (e) { console.error("start error", e); flash("Error al empezar: " + ((e as Error)?.message || "desconocido")); sfx("reject"); }
+    } catch (e) { console.error("[milo] start throw:", e); flash("Error al empezar: " + ((e as Error)?.message || "desconocido")); sfx("reject"); }
     finally { setBusy(false); }
   };
 
-  const finish = async (file: File) => {
+  // file puede ser null => cerrar el paseo SIN foto (salvavidas).
+  const finish = async (file: File | null) => {
+    console.log("[milo] finish()", { busy, active: active?.id, conFoto: !!file });
     if (!active || busy) return;
+    const walkId = active.id;
+    const startedAt = active.started_at;
     setBusy(true);
     try {
-      const url = await up(file, "vuelta"); // si falla, no bloqueamos el cierre
-      const mins = Math.max(0, Math.round((Date.now() - new Date(active.started_at).getTime()) / 60000));
+      const url = file ? await up(file, "vuelta") : null; // si falla / no hay, cerramos igual
+      const mins = Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 60000));
       const pts = pointsFor(mins);
-      const { error } = await rpc("finish_milo", { p_walk: active.id, p_photo: url, p_pin: kid?.pin });
-      if (error) { console.error("finish_milo", error); flash("No se pudo cerrar: " + (error.message || error.code || "error")); sfx("reject"); return; }
-      sfx("complete"); setShareFile(file); setDone({ mins, pts });
-      flash(!url ? "Paseo cerrado · la foto no subió, mándala por WhatsApp 📲" : pts > 0 ? `Paseo enviado (${mins} min · +${pts} pts) · lo validan los padres` : `Paseo de ${mins} min (muy corto para puntuar)`);
+      const { error } = await rpc("finish_milo", { p_walk: walkId, p_photo: url, p_pin: kid?.pin });
+      if (error) { console.error("[milo] finish_milo error:", error); flash("No se pudo cerrar: " + (error.message || error.code || "error")); sfx("reject"); return; }
+      sfx("complete"); if (file) setShareFile(file); setDone({ mins, pts });
+      flash(!url ? "Paseo cerrado · si tienes foto, mándala por WhatsApp 📲" : pts > 0 ? `Paseo enviado (${mins} min · +${pts} pts) · lo validan los padres` : `Paseo de ${mins} min (muy corto para puntuar)`);
       refresh();
-    } catch (e) { console.error("finish error", e); flash("Error al cerrar el paseo: " + ((e as Error)?.message || "desconocido")); sfx("reject"); }
+    } catch (e) { console.error("[milo] finish throw:", e); flash("Error al cerrar el paseo: " + ((e as Error)?.message || "desconocido")); sfx("reject"); }
     finally { setBusy(false); }
   };
 
   const cancelWalk = async () => {
+    console.log("[milo] cancel()", { busy, active: active?.id });
     if (!active || busy) return;
+    const walkId = active.id;
     setBusy(true);
     try {
-      const { error } = await rpc("cancel_milo", { p_walk: active.id, p_pin: kid?.pin });
-      if (error) { console.error("cancel_milo", error); flash("No se pudo cancelar: " + (error.message || error.code || "error")); return; }
+      const { error } = await rpc("cancel_milo", { p_walk: walkId, p_pin: kid?.pin });
+      if (error) { console.error("[milo] cancel_milo error:", error); flash("No se pudo cancelar: " + (error.message || error.code || "error")); return; }
       sfx("reject"); flash("Paseo cancelado. Ya puedes empezar otro 🐶"); refresh();
-    } catch (e) { console.error("cancel error", e); flash("Error al cancelar el paseo"); }
+    } catch (e) { console.error("[milo] cancel throw:", e); flash("Error al cancelar el paseo"); }
     finally { setBusy(false); }
   };
 
@@ -113,7 +125,18 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
   const PhotoBtn = ({ label, tag, onPick, variant }: { label: string; tag: string; onPick: (f: File) => void; variant: string }) => (
     <label className={`w-full font-bold rounded-xl px-4 py-3.5 text-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition text-white ${busy ? "opacity-50 pointer-events-none" : ""}`} style={{ background: variant }}>
       <Camera size={18} /> {label}
-      <input type="file" accept="image/*" capture="environment" hidden disabled={busy} onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])} />
+      <input
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        disabled={busy}
+        onChange={(e) => {
+          const f = e.target.files?.[0] || null;
+          e.target.value = ""; // CLAVE: permite volver a elegir la MISMA foto y que onChange salte
+          if (f) onPick(f);
+        }}
+      />
     </label>
   );
 
@@ -164,9 +187,10 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
           </div>
           {iStarted ? (
             <>
-              <PhotoBtn label="He vuelto · foto al entrar" tag="vuelta" onPick={finish} variant="linear-gradient(135deg,#EF4444,#FF8A5B)" />
+              <PhotoBtn label="He vuelto · foto al entrar" tag="vuelta" onPick={(f) => finish(f)} variant="linear-gradient(135deg,#EF4444,#FF8A5B)" />
               <p className="text-[11px] text-navy/45 font-semibold text-center mt-2 flex items-center justify-center gap-1"><DoorClosed size={12} /> No olvides pulsar al volver para cerrar el paseo</p>
-              <button onClick={cancelWalk} disabled={busy} className="w-full text-[12px] font-semibold text-navy/40 hover:text-red-500 mt-1.5 py-1 transition disabled:opacity-50">¿Atascado o te equivocaste? Cancelar paseo</button>
+              <button onClick={() => finish(null)} disabled={busy} className="w-full text-[12px] font-semibold text-navy/55 hover:text-navy mt-1.5 py-1 transition disabled:opacity-50">¿No te deja con foto? Cerrar paseo sin foto</button>
+              <button onClick={cancelWalk} disabled={busy} className="w-full text-[12px] font-semibold text-navy/40 hover:text-red-500 mt-0.5 py-1 transition disabled:opacity-50">¿Atascado o te equivocaste? Cancelar paseo</button>
             </>
           ) : (
             <div className="rounded-xl px-3 py-2.5 text-xs font-semibold text-center bg-slate-50 text-navy/55">🔒 Lo tiene que cerrar <b>{activeKid?.name || "quien lo empezó"}</b> o los padres.</div>
@@ -182,7 +206,7 @@ export default function MiloCard({ ctx, me }: { ctx: Ctx; me: Kid }) {
               </div>
             ))}
           </div>
-          <PhotoBtn label="Salgo con Milo · foto al salir" tag="salida" onPick={start} variant="linear-gradient(135deg,#16A34A,#19D3AE)" />
+          <PhotoBtn label="Salgo con Milo · foto al salir" tag="salida" onPick={(f) => start(f)} variant="linear-gradient(135deg,#16A34A,#19D3AE)" />
           <p className="text-[11px] text-navy/45 font-semibold text-center mt-2">Al pulsar arranca el cronómetro. Luego, al volver, púlsalo otra vez.</p>
         </div>
       )}
